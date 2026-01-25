@@ -294,3 +294,104 @@ ADD COLUMN is_online TINYINT(1) DEFAULT 0 AFTER last_activity;
 
 -- Create index for faster queries
 CREATE INDEX idx_online_status ON users(is_online, last_activity);
+
+USE complaint_management_system;
+
+-- ============================================
+-- PHASE 1: DATABASE SCHEMA UPDATES
+-- ============================================
+
+-- 1. Update status enum to include 'Assigned' and 'On Hold'
+ALTER TABLE complaints 
+MODIFY COLUMN status ENUM('Pending', 'Assigned', 'In Progress', 'On Hold', 'Resolved', 'Closed') DEFAULT 'Pending';
+
+-- 2. Add new columns for assignment tracking
+ALTER TABLE complaints 
+ADD COLUMN assigned_at TIMESTAMP NULL AFTER assigned_to,
+ADD COLUMN assigned_by INT NULL AFTER assigned_at,
+ADD COLUMN assignment_note TEXT NULL AFTER assigned_by,
+ADD COLUMN can_be_reassigned TINYINT(1) DEFAULT 1 AFTER assignment_note;
+
+-- 3. Add foreign key for assigned_by
+ALTER TABLE complaints
+ADD FOREIGN KEY (assigned_by) REFERENCES users(user_id) ON DELETE SET NULL;
+
+-- 4. Create assignment history table
+CREATE TABLE IF NOT EXISTS assignment_history (
+    assignment_history_id INT AUTO_INCREMENT PRIMARY KEY,
+    complaint_id INT NOT NULL,
+    assigned_by INT NOT NULL COMMENT 'Super admin who made the assignment',
+    assigned_from INT NULL COMMENT 'Previous admin (for reassignments)',
+    assigned_to INT NOT NULL COMMENT 'Admin who received the assignment',
+    assignment_note TEXT COMMENT 'Note from super admin to assigned admin',
+    action_type ENUM('assigned', 'reassigned', 'unassigned') DEFAULT 'assigned',
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (complaint_id) REFERENCES complaints(complaint_id) ON DELETE CASCADE,
+    FOREIGN KEY (assigned_by) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (assigned_from) REFERENCES users(user_id) ON DELETE SET NULL,
+    FOREIGN KEY (assigned_to) REFERENCES users(user_id) ON DELETE CASCADE,
+    INDEX idx_complaint (complaint_id),
+    INDEX idx_assigned_to (assigned_to)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Tracks complaint assignment history';
+
+-- 5. Create status progression rules table (for validation)
+CREATE TABLE IF NOT EXISTS status_progression_rules (
+    rule_id INT AUTO_INCREMENT PRIMARY KEY,
+    current_status VARCHAR(50) NOT NULL,
+    allowed_next_status VARCHAR(50) NOT NULL,
+    can_reverse TINYINT(1) DEFAULT 0 COMMENT '1 = Super admin can reverse, 0 = No one can reverse',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_progression (current_status, allowed_next_status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Defines allowed status transitions';
+
+-- 6. Insert status progression rules
+INSERT INTO status_progression_rules (current_status, allowed_next_status, can_reverse) VALUES
+-- From Pending
+('Pending', 'Assigned', 0),
+-- From Assigned
+('Assigned', 'In Progress', 0),
+('Assigned', 'On Hold', 0),
+-- From In Progress
+('In Progress', 'On Hold', 1),
+('In Progress', 'Resolved', 0),
+-- From On Hold
+('On Hold', 'In Progress', 1),
+('On Hold', 'Assigned', 1),
+-- From Resolved
+('Resolved', 'Closed', 0),
+('Resolved', 'In Progress', 1); -- Can reopen if issue persists
+
+-- 7. Update existing complaints to have consistent status
+-- Set unassigned complaints to 'Pending'
+UPDATE complaints SET status = 'Pending' WHERE assigned_to IS NULL AND status != 'Closed';
+
+-- Set assigned complaints without progress to 'Assigned'
+UPDATE complaints SET status = 'Assigned' WHERE assigned_to IS NOT NULL AND status = 'Pending';
+
+-- 8. Add index for better performance
+CREATE INDEX idx_status_assigned ON complaints(status, assigned_to);
+CREATE INDEX idx_assigned_at ON complaints(assigned_at);
+
+-- ============================================
+-- VERIFICATION QUERIES (Run to check)
+-- ============================================
+
+-- Check new columns exist
+DESCRIBE complaints;
+
+-- Check assignment history table
+DESCRIBE assignment_history;
+
+-- Check status rules
+SELECT * FROM status_progression_rules ORDER BY current_status;
+
+-- Check complaints with new structure
+SELECT 
+    complaint_id, 
+    subject, 
+    status, 
+    assigned_to, 
+    assigned_at, 
+    assigned_by 
+FROM complaints 
+LIMIT 5;
