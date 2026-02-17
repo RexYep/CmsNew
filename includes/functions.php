@@ -441,39 +441,103 @@ function getCommentCount($complaint_id)
     return $stmt->get_result()->fetch_assoc()['count'];
 }
 
-// Function to send email using PHPMailer
+// Function to send email
+// Uses Brevo HTTP API (works on Render - no SMTP port blocking)
+// Falls back to SMTP for local development
 function sendEmail($to, $subject, $message)
+{
+    $is_production = getenv('APP_ENV') === 'production';
+
+    if ($is_production) {
+        return sendEmailBrevoAPI($to, $subject, $message);
+    } else {
+        return sendEmailSMTP($to, $subject, $message);
+    }
+}
+
+// Brevo HTTP API - for production (Render)
+// Port 443 HTTPS - never blocked
+function sendEmailBrevoAPI($to, $subject, $message)
+{
+    $api_key      = getenv('BREVO_API_KEY') ?: '';
+    $from_email   = getenv('MAIL_USERNAME') ?: 'cmsproperty@gmail.com';
+    $from_name    = defined('SITE_NAME') ? SITE_NAME : 'Complaint Management System';
+
+    if (empty($api_key)) {
+        error_log("Email Error: BREVO_API_KEY is not set in environment variables");
+        return false;
+    }
+
+    $data = [
+        'sender'     => ['email' => $from_email, 'name' => $from_name],
+        'to'         => [['email' => $to]],
+        'subject'    => $subject,
+        'htmlContent'=> $message,
+        'textContent'=> strip_tags($message)
+    ];
+
+    $ch = curl_init('https://api.brevo.com/v3/smtp/email');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => json_encode($data),
+        CURLOPT_HTTPHEADER     => [
+            'accept: application/json',
+            'api-key: ' . $api_key,
+            'content-type: application/json'
+        ],
+        CURLOPT_TIMEOUT        => 30,
+        CURLOPT_SSL_VERIFYPEER => true,
+    ]);
+
+    $response = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curl_error = curl_error($ch);
+    curl_close($ch);
+
+    if ($curl_error) {
+        error_log("Email cURL Error to {$to}: {$curl_error}");
+        return false;
+    }
+
+    if ($http_code >= 200 && $http_code < 300) {
+        return true;
+    }
+
+    error_log("Email API Error to {$to}: HTTP {$http_code} - {$response}");
+    return false;
+}
+
+// SMTP - for local development (XAMPP)
+function sendEmailSMTP($to, $subject, $message)
 {
     $mail = new PHPMailer(true);
 
     try {
-        // Server settings
         $mail->isSMTP();
-        $mail->Host       = getenv('MAIL_HOST')    ?: 'smtp.gmail.com';
+        $mail->Host       = getenv('MAIL_HOST')     ?: 'smtp.gmail.com';
         $mail->SMTPAuth   = true;
-        $mail->Username   = getenv('MAIL_USERNAME') ?: 'cmsproperty@gmail.com';
-        $mail->Password   = getenv('MAIL_PASSWORD') ?: ''; // Set in .env or Render Dashboard
+        $mail->Username   = getenv('MAIL_USERNAME')  ?: 'cmsproperty@gmail.com';
+        $mail->Password   = getenv('MAIL_PASSWORD')  ?: '';
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port       = (int)(getenv('MAIL_PORT') ?: 587);
-        $mail->Timeout    = 30; // Important for Render
+        $mail->Timeout    = 30;
 
-        // Recipients
         $mail->setFrom(
             getenv('MAIL_USERNAME') ?: 'cmsproperty@gmail.com',
             defined('SITE_NAME') ? SITE_NAME : 'Complaint Management System'
         );
         $mail->addAddress($to);
 
-        // Content
         $mail->isHTML(true);
         $mail->Subject = $subject;
         $mail->Body    = $message;
-        $mail->AltBody = strip_tags($message); // Plain text fallback
+        $mail->AltBody = strip_tags($message);
 
         $mail->send();
         return true;
     } catch (Exception $e) {
-        error_log("Email Error to {$to}: {$mail->ErrorInfo}");
+        error_log("Email SMTP Error to {$to}: {$mail->ErrorInfo}");
         return false;
     }
 }

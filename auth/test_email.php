@@ -1,36 +1,16 @@
 <?php
-// ============================================
-// TEMPORARY EMAIL DEBUG PAGE
-// auth/test_email.php
-// ============================================
-// PURPOSE: Check kung bakit hindi gumagana ang email
-//
-// HOW TO USE:
-// 1. Upload to your project at: auth/test_email.php
-// 2. Visit: https://cmsnew-5ocg.onrender.com/auth/test_email.php
-// 3. Check the output
-//
 // ⚠️ DELETE THIS FILE after debugging!
-// ============================================
-
 require_once '../config/config.php';
 
- require_once '../vendor/autoload.php';
-                use PHPMailer\PHPMailer\PHPMailer;
-                use PHPMailer\PHPMailer\Exception;
-                use PHPMailer\PHPMailer\SMTP;
-// Security: only allow if logged in as admin OR via secret key
 $secret = $_GET['key'] ?? '';
 if ($secret !== 'debug2026') {
-    die("❌ Access denied. Add ?key=debug2026 to URL");
+    die("Access denied. Add ?key=debug2026 to URL");
 }
 
-// Get email settings from environment
-$mail_host     = getenv('MAIL_HOST')     ?: 'smtp.gmail.com';
-$mail_port     = getenv('MAIL_PORT')     ?: '587';
-$mail_username = getenv('MAIL_USERNAME') ?: '(not set)';
-$mail_password = getenv('MAIL_PASSWORD') ?: '(not set)';
-
+$brevo_api_key = getenv('BREVO_API_KEY') ?: '';
+$mail_username = getenv('MAIL_USERNAME') ?: '';
+$app_env       = getenv('APP_ENV') ?: 'not set';
+$test_to       = $_GET['email'] ?? $mail_username;
 ?>
 <!DOCTYPE html>
 <html>
@@ -40,139 +20,84 @@ $mail_password = getenv('MAIL_PASSWORD') ?: '(not set)';
 </head>
 <body class="p-4">
 <div class="container" style="max-width:700px;">
-    <h2>📧 Email Configuration Debug</h2>
-    <hr>
+    <h2>Email Debug - Brevo API</h2><hr>
 
-    <!-- Show current env var values -->
     <div class="card mb-4">
-        <div class="card-header bg-info text-white">
-            <strong>Environment Variables Check</strong>
-        </div>
+        <div class="card-header bg-info text-white"><strong>Environment Variables</strong></div>
         <div class="card-body">
             <table class="table table-sm">
                 <tr>
-                    <td><strong>MAIL_HOST</strong></td>
-                    <td><?php echo htmlspecialchars($mail_host); ?></td>
-                    <td><?php echo $mail_host === 'smtp.gmail.com' ? '✅' : '⚠️ Expected: smtp.gmail.com'; ?></td>
+                    <td><strong>APP_ENV</strong></td>
+                    <td><?php echo htmlspecialchars($app_env); ?></td>
+                    <td><?php echo $app_env === 'production' ? '✅ Will use Brevo API' : '⚠️ Set to: production'; ?></td>
                 </tr>
                 <tr>
-                    <td><strong>MAIL_PORT</strong></td>
-                    <td><?php echo htmlspecialchars($mail_port); ?></td>
-                    <td><?php echo $mail_port == '587' ? '✅' : '⚠️ Expected: 587'; ?></td>
+                    <td><strong>BREVO_API_KEY</strong></td>
+                    <td><?php echo empty($brevo_api_key) ? '<span class="text-danger">NOT SET</span>' : '✅ Set ('.strlen($brevo_api_key).' chars) - '.substr($brevo_api_key,0,8).'****'; ?></td>
+                    <td><?php echo !empty($brevo_api_key) ? '✅' : '❌ Missing!'; ?></td>
                 </tr>
                 <tr>
                     <td><strong>MAIL_USERNAME</strong></td>
-                    <td><?php echo htmlspecialchars($mail_username); ?></td>
-                    <td><?php echo filter_var($mail_username, FILTER_VALIDATE_EMAIL) ? '✅' : '❌ Invalid email'; ?></td>
-                </tr>
-                <tr>
-                    <td><strong>MAIL_PASSWORD</strong></td>
-                    <td>
-                        <?php
-                        $pw = getenv('MAIL_PASSWORD') ?: '';
-                        if (empty($pw)) {
-                            echo '<span class="text-danger">❌ NOT SET!</span>';
-                        } else {
-                            // Show length and first/last char only
-                            echo '✅ Set (' . strlen($pw) . ' chars) - ' .
-                                 substr($pw, 0, 2) . '****' . substr($pw, -2);
-                        }
-                        ?>
-                    </td>
-                    <td>
-                        <?php
-                        $pw_len = strlen(getenv('MAIL_PASSWORD') ?: '');
-                        if ($pw_len === 0) echo '❌ Empty!';
-                        elseif ($pw_len === 16) echo '✅ Correct length (16)';
-                        elseif ($pw_len === 19) echo '✅ Correct length with spaces (xxxx xxxx xxxx xxxx)';
-                        else echo '⚠️ Length: ' . $pw_len . ' (Gmail App Password should be 16 or 19 chars)';
-                        ?>
-                    </td>
+                    <td><?php echo htmlspecialchars($mail_username ?: 'not set'); ?></td>
+                    <td><?php echo filter_var($mail_username, FILTER_VALIDATE_EMAIL) ? '✅' : '❌'; ?></td>
                 </tr>
             </table>
         </div>
     </div>
 
-    <!-- Test SMTP Connection -->
     <div class="card mb-4">
-        <div class="card-header bg-warning">
-            <strong>SMTP Connection Test</strong>
-        </div>
+        <div class="card-header bg-warning"><strong>Brevo API Test - Sending to: <?php echo htmlspecialchars($test_to); ?></strong></div>
         <div class="card-body">
-            <?php
-            if (!file_exists('../vendor/autoload.php')) {
-                echo '<div class="alert alert-danger">❌ vendor/autoload.php not found! Run: composer install</div>';
+        <?php
+        if (empty($brevo_api_key)) {
+            echo '<div class="alert alert-danger">❌ BREVO_API_KEY not set! Add it in Render Dashboard Environment tab.</div>';
+        } else {
+            $data = [
+                'sender'      => ['email' => $mail_username ?: 'cmsproperty@gmail.com', 'name' => 'CMS Test'],
+                'to'          => [['email' => $test_to]],
+                'subject'     => 'Test Email - ' . date('Y-m-d H:i:s'),
+                'htmlContent' => '<h2>Test Email</h2><p>Brevo API is working! Sent at: '.date('Y-m-d H:i:s').'</p>',
+            ];
 
+            $ch = curl_init('https://api.brevo.com/v3/smtp/email');
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST           => true,
+                CURLOPT_POSTFIELDS     => json_encode($data),
+                CURLOPT_HTTPHEADER     => [
+                    'accept: application/json',
+                    'api-key: ' . $brevo_api_key,
+                    'content-type: application/json'
+                ],
+                CURLOPT_TIMEOUT => 30,
+            ]);
+
+            $response  = curl_exec($ch);
+            $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curl_err  = curl_error($ch);
+            curl_close($ch);
+
+            if ($curl_err) {
+                echo '<div class="alert alert-danger">❌ cURL Error: '.htmlspecialchars($curl_err).'</div>';
+            } elseif ($http_code >= 200 && $http_code < 300) {
+                echo '<div class="alert alert-success">✅ <strong>EMAIL SENT via Brevo API!</strong><br>Check inbox of: '.htmlspecialchars($test_to).'</div>';
             } else {
-               
-
-              $mail = new PHPMailer(true);
-                $debugOutput = '';
-
-                try {
-                    $mail->isSMTP();
-                    $mail->Host       = $mail_host;
-                    $mail->SMTPAuth   = true;
-                    $mail->Username   = getenv('MAIL_USERNAME') ?: '';
-                    $mail->Password   = getenv('MAIL_PASSWORD') ?: '';
-                    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-                    $mail->Port       = (int)$mail_port;
-                    $mail->Timeout    = 15;
-
-                    // Capture debug output
-                    $mail->SMTPDebug  = SMTP::DEBUG_SERVER;
-                    $mail->Debugoutput = function($str, $level) use (&$debugOutput) {
-                        $debugOutput .= htmlspecialchars($str) . "\n";
-                    };
-
-                    // Test recipients
-                    $test_to = $_GET['email'] ?? getenv('MAIL_USERNAME');
-                    $mail->setFrom(getenv('MAIL_USERNAME') ?: '', 'CMS Test');
-                    $mail->addAddress($test_to);
-                    $mail->Subject = 'Test Email from CMS - ' . date('Y-m-d H:i:s');
-                    $mail->isHTML(true);
-                    $mail->Body    = '<h2>✅ Test Email</h2><p>If you receive this, email is working!</p>';
-                    $mail->AltBody = 'Test email - email is working!';
-
-                    $mail->send();
-
-                    echo '<div class="alert alert-success">';
-                    echo '<strong>✅ EMAIL SENT SUCCESSFULLY!</strong><br>';
-                    echo 'Test email sent to: ' . htmlspecialchars($test_to);
-                    echo '</div>';
-
-                } catch (Exception $e) {
-                    echo '<div class="alert alert-danger">';
-                    echo '<strong>❌ EMAIL FAILED!</strong><br>';
-                    echo '<strong>Error:</strong> ' . htmlspecialchars($mail->ErrorInfo);
-                    echo '</div>';
-                }
-
-                if ($debugOutput) {
-                    echo '<div class="mt-3">';
-                    echo '<strong>SMTP Debug Log:</strong>';
-                    echo '<pre class="bg-dark text-light p-3 mt-2" style="font-size:0.75rem; max-height:300px; overflow-y:auto;">';
-                    echo $debugOutput;
-                    echo '</pre>';
-                    echo '</div>';
-                }
+                $decoded = json_decode($response, true);
+                echo '<div class="alert alert-danger">❌ HTTP '.$http_code.' - '.htmlspecialchars($decoded['message'] ?? $response).'</div>';
             }
-            ?>
+            echo '<small>Raw response: <code>'.htmlspecialchars($response).'</code></small>';
+        }
+        ?>
         </div>
     </div>
 
-    <div class="alert alert-warning">
-        <strong>⚠️ IMPORTANT:</strong> Delete this file after debugging!<br>
-        <code>auth/test_email.php</code>
-    </div>
+    <div class="alert alert-warning">⚠️ DELETE this file after debugging: <code>auth/test_email.php</code></div>
 
-    <a href="?key=debug2026&email=<?php echo urlencode($_GET['email'] ?? ''); ?>" class="btn btn-primary">
-        🔄 Retest
-    </a>
-    &nbsp;
-    <a href="?key=debug2026&email=<?php echo urlencode($mail_username); ?>" class="btn btn-secondary">
-        Send to <?php echo htmlspecialchars($mail_username); ?>
-    </a>
+    <form method="GET" class="d-flex gap-2">
+        <input type="hidden" name="key" value="debug2026">
+        <input type="email" name="email" class="form-control" value="<?php echo htmlspecialchars($test_to); ?>">
+        <button type="submit" class="btn btn-primary">Test Again</button>
+    </form>
 </div>
 </body>
 </html>
