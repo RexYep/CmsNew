@@ -1,0 +1,11 @@
+# Allow common attachment files
+
+<FilesMatch "\.(jpg|jpeg|png|gif|pdf|doc|docx|xls|xlsx|txt|mp4|mov|webm)$">
+Require all granted
+</FilesMatch>
+
+# Block all executable scripts
+
+<FilesMatch "\.(php|php\d|phtml|phar|cgi|pl|asp|aspx|jsp)$">
+Require all denied
+</FilesMatch>
