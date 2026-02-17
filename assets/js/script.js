@@ -51,37 +51,52 @@ document.addEventListener("DOMContentLoaded", function () {
   const sidebar = document.getElementById("sidebar");
   const mobileToggle = document.getElementById("mobileToggle");
   const mobileSidebarToggle = document.getElementById("mobileSidebarToggle");
+  const sidebarOverlay = document.getElementById("sidebarOverlay");
+  const sidebarCloseBtn = document.getElementById("sidebarCloseBtn");
 
-  // Toggle sidebar on mobile button click
-  if (mobileToggle && sidebar) {
-    mobileToggle.addEventListener("click", function (e) {
-      e.stopPropagation();
-      sidebar.classList.toggle("active");
-    });
+  // Open sidebar
+  function openSidebar() {
+    if (sidebar) sidebar.classList.add("active");
+    if (sidebarOverlay) sidebarOverlay.classList.add("active");
+    document.body.style.overflow = "hidden"; // Prevent background scroll
   }
 
-  // Toggle sidebar from navbar button
-  if (mobileSidebarToggle && sidebar) {
-    mobileSidebarToggle.addEventListener("click", function (e) {
-      e.stopPropagation();
-      sidebar.classList.toggle("active");
-    });
+  // Close sidebar
+  function closeSidebar() {
+    if (sidebar) sidebar.classList.remove("active");
+    if (sidebarOverlay) sidebarOverlay.classList.remove("active");
+    document.body.style.overflow = ""; // Restore scroll
   }
 
-  // Close sidebar when clicking outside on mobile
-  document.addEventListener("click", function (event) {
-    if (window.innerWidth <= 768 && sidebar) {
-      const isClickInsideSidebar = sidebar.contains(event.target);
-      const isClickOnToggle =
-        mobileToggle && mobileToggle.contains(event.target);
-      const isClickOnNavToggle =
-        mobileSidebarToggle && mobileSidebarToggle.contains(event.target);
-
-      if (!isClickInsideSidebar && !isClickOnToggle && !isClickOnNavToggle) {
-        sidebar.classList.remove("active");
-      }
+  // Toggle sidebar
+  function toggleSidebar(e) {
+    if (e) e.stopPropagation();
+    if (sidebar && sidebar.classList.contains("active")) {
+      closeSidebar();
+    } else {
+      openSidebar();
     }
-  });
+  }
+
+  // Mobile toggle button (bottom right floating)
+  if (mobileToggle) {
+    mobileToggle.addEventListener("click", toggleSidebar);
+  }
+
+  // Navbar hamburger button
+  if (mobileSidebarToggle) {
+    mobileSidebarToggle.addEventListener("click", toggleSidebar);
+  }
+
+  // Close button inside sidebar
+  if (sidebarCloseBtn) {
+    sidebarCloseBtn.addEventListener("click", closeSidebar);
+  }
+
+  // Close when clicking overlay
+  if (sidebarOverlay) {
+    sidebarOverlay.addEventListener("click", closeSidebar);
+  }
 
   // Close sidebar when clicking on a menu item on mobile
   if (sidebar) {
@@ -89,11 +104,19 @@ document.addEventListener("DOMContentLoaded", function () {
     sidebarLinks.forEach(function (link) {
       link.addEventListener("click", function () {
         if (window.innerWidth <= 768) {
-          sidebar.classList.remove("active");
+          closeSidebar();
         }
       });
     });
   }
+
+  // Close sidebar on window resize (if desktop)
+  window.addEventListener("resize", function () {
+    if (window.innerWidth > 768) {
+      closeSidebar();
+      document.body.style.overflow = ""; // Always restore on desktop
+    }
+  });
 
   // ============================================
   // AUTO-DISMISS ALERTS

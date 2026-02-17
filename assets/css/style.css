@@ -2504,3 +2504,323 @@ pre {
   opacity: 1 !important;
   visibility: visible !important;
 }
+/* ============================================
+   MOBILE RESPONSIVE FIXES
+   Add these at the BOTTOM of style.css
+   ============================================ */
+
+/* ========== FIX 1: Sidebar Overlay sa Mobile ========== */
+/* Dark overlay kapag bukas ang sidebar sa mobile */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  backdrop-filter: blur(2px);
+}
+
+.sidebar-overlay.active {
+  display: block;
+}
+
+/* ========== FIX 2: Z-index hierarchy ========== */
+.sidebar {
+  z-index: 1000;
+}
+
+.top-navbar {
+  position: relative;
+  z-index: 100;
+}
+
+/* ========== FIX 3: Mobile Toggle Button ========== */
+.mobile-menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 6px;
+  transition: var(--transition);
+  margin-right: 10px;
+}
+
+.mobile-menu-btn:hover {
+  background: var(--bg-secondary);
+}
+
+@media (max-width: 768px) {
+  .mobile-menu-btn {
+    display: block;
+  }
+}
+
+/* ========== FIX 4: Top Navbar Mobile Layout ========== */
+@media (max-width: 768px) {
+  .top-navbar {
+    padding: 10px 15px;
+    gap: 10px;
+    flex-wrap: nowrap;
+  }
+
+  .navbar-left {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .navbar-left h5 {
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .navbar-left small {
+    display: none; /* Hide subtitle on mobile */
+  }
+
+  /* Right side icons - keep compact */
+  .navbar-right,
+  .user-info {
+    flex-shrink: 0;
+    gap: 8px !important;
+  }
+
+  /* Hide text labels on mobile, show icons only */
+  .user-details {
+    display: none;
+  }
+
+  /* Dark mode toggle smaller on mobile */
+  .dark-mode-toggle {
+    width: 36px;
+    height: 36px;
+    margin-right: 8px;
+  }
+}
+
+/* ========== FIX 5: Main Content Mobile ========== */
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0 !important;
+    padding: 12px;
+    width: 100%;
+  }
+
+  /* Prevent horizontal scroll */
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Cards full width */
+  .card {
+    margin-bottom: 15px;
+  }
+
+  /* Row gutters smaller on mobile */
+  .row {
+    --bs-gutter-x: 10px;
+  }
+}
+
+/* ========== FIX 6: Tables on Mobile ========== */
+@media (max-width: 768px) {
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Hide less important columns on mobile */
+  .table .d-none-mobile {
+    display: none !important;
+  }
+
+  .table th,
+  .table td {
+    white-space: nowrap;
+    font-size: 0.8rem;
+    padding: 8px 10px;
+  }
+
+  /* Action buttons compact on mobile */
+  .btn-group-sm .btn {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+  }
+}
+
+/* ========== FIX 7: Stats Cards Mobile ========== */
+@media (max-width: 576px) {
+  .stats-card {
+    padding: 15px;
+  }
+
+  .stats-card h2,
+  .stats-card .h2 {
+    font-size: 1.8rem;
+  }
+
+  .stats-card .bi {
+    font-size: 1.8rem !important;
+  }
+
+  /* Stack 2 cards per row on small mobile */
+  .col-xl-3.col-md-6 {
+    width: 50%;
+  }
+}
+
+/* ========== FIX 8: Forms Mobile ========== */
+@media (max-width: 576px) {
+  .form-control,
+  .form-select {
+    font-size: 16px; /* Prevent iOS zoom on focus */
+  }
+
+  .btn {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+
+  /* Exception: buttons inside button groups stay inline */
+  .btn-group .btn,
+  .d-flex .btn {
+    width: auto;
+    margin-bottom: 0;
+  }
+}
+
+/* ========== FIX 9: Modals Mobile ========== */
+@media (max-width: 576px) {
+  .modal-dialog {
+    margin: 10px;
+  }
+
+  .modal-body {
+    padding: 15px;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+    margin: 0;
+  }
+}
+
+/* ========== FIX 10: Sidebar Close Button ========== */
+.sidebar-close-btn {
+  display: none;
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  z-index: 1001;
+}
+
+.sidebar-close-btn:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+@media (max-width: 768px) {
+  .sidebar-close-btn {
+    display: flex;
+  }
+
+  /* Sidebar position fix on mobile */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+
+  .sidebar.active {
+    transform: translateX(0);
+    box-shadow: 5px 0 20px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* ========== FIX 11: Page Title Mobile ========== */
+@media (max-width: 576px) {
+  h1,
+  .h1 {
+    font-size: 1.5rem;
+  }
+  h2,
+  .h2 {
+    font-size: 1.3rem;
+  }
+  h3,
+  .h3 {
+    font-size: 1.1rem;
+  }
+
+  .card-header {
+    font-size: 0.9rem;
+    padding: 12px 15px;
+  }
+}
+
+/* ========== FIX 12: Complaint Details Mobile ========== */
+@media (max-width: 768px) {
+  /* Stack the two-column layout vertically */
+  .col-lg-8,
+  .col-lg-4 {
+    width: 100% !important;
+  }
+
+  /* Attachment grid - 2 per row on mobile */
+  .col-lg-4.col-md-6 {
+    width: 50%;
+  }
+}
+
+/* ========== FIX 13: Back to Top & Mobile Toggle positioning ========== */
+@media (max-width: 768px) {
+  .mobile-toggle {
+    bottom: 15px;
+    right: 15px;
+    width: 52px;
+    height: 52px;
+    font-size: 1.3rem;
+  }
+
+  .back-to-top {
+    bottom: 80px;
+    right: 15px;
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* ========== FIX 14: Notification Dropdown Mobile ========== */
+@media (max-width: 576px) {
+  .notification-dropdown {
+    width: 300px !important;
+    max-width: calc(100vw - 20px);
+    right: -50px !important;
+    left: auto !important;
+  }
+}

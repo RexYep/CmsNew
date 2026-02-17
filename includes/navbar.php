@@ -10,8 +10,15 @@ $is_admin = isAdmin();
 $is_user = isUser();
 $pending_review = $conn->query("SELECT COUNT(*) as count FROM complaints WHERE approval_status = 'pending_review'")->fetch_assoc()['count']; ?>
 
+<!-- Sidebar Overlay (dark background kapag bukas ang sidebar sa mobile) -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
 <!-- Sidebar Navigation -->
 <div class="sidebar" id="sidebar">
+    <!-- Close button - visible sa mobile lang -->
+    <button class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Close Sidebar">
+        <i class="bi bi-x-lg"></i>
+    </button>
     <div class="sidebar-brand">
         <!-- Barangay Logo -->
         <img src="<?php echo SITE_URL; ?>assets/images/barangay-logo.jpg" 
@@ -292,16 +299,24 @@ $pending_review = $conn->query("SELECT COUNT(*) as count FROM complaints WHERE a
             </div>
             
            <?php
-// Get current user's profile picture
+// Get current user's profile picture (supports both local and Cloudinary)
 $current_user_id = $_SESSION['user_id'];
-$stmt = $conn->prepare("SELECT profile_picture FROM users WHERE user_id = ?");
+$stmt = $conn->prepare("SELECT profile_picture, avatar_url FROM users WHERE user_id = ?");
 $stmt->bind_param("i", $current_user_id);
 $stmt->execute();
 $current_user = $stmt->get_result()->fetch_assoc();
+
+// Priority: avatar_url (Cloudinary) → profile_picture (local) → initials
+$profile_img_url = '';
+if (!empty($current_user['avatar_url'])) {
+    $profile_img_url = $current_user['avatar_url']; // Cloudinary URL
+} elseif (!empty($current_user['profile_picture'])) {
+    $profile_img_url = SITE_URL . $current_user['profile_picture']; // Local path
+}
 ?>
 
-<?php if ($current_user['profile_picture'] && file_exists('../' . $current_user['profile_picture'])): ?>
-    <img src="<?php echo SITE_URL . $current_user['profile_picture']; ?>" 
+<?php if ($profile_img_url): ?>
+    <img src="<?php echo htmlspecialchars($profile_img_url); ?>" 
          class="rounded-circle" 
          width="42" 
          height="42" 
