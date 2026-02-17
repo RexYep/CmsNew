@@ -447,14 +447,15 @@ function sendEmail($to, $subject, $message)
     $mail = new PHPMailer(true);
 
     try {
-         // Server settings
+        // Server settings
         $mail->isSMTP();
-        $mail->Host       = getenv('MAIL_HOST')     ?: 'smtp.gmail.com';
+        $mail->Host       = getenv('MAIL_HOST')    ?: 'smtp.gmail.com';
         $mail->SMTPAuth   = true;
-        $mail->Username   = getenv('MAIL_USERNAME')  ?: 'cmsproperty@gmail.com';
-        $mail->Password   = getenv('MAIL_PASSWORD')  ?: 'abcd eeee eee efrr';
+        $mail->Username   = getenv('MAIL_USERNAME') ?: 'cmsproperty@gmail.com';
+        $mail->Password   = getenv('MAIL_PASSWORD') ?: ''; // Set in .env or Render Dashboard
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port       = (int)(getenv('MAIL_PORT') ?: 587);
+        $mail->Timeout    = 30; // Important for Render
 
         // Recipients
         $mail->setFrom(
@@ -467,12 +468,12 @@ function sendEmail($to, $subject, $message)
         $mail->isHTML(true);
         $mail->Subject = $subject;
         $mail->Body    = $message;
+        $mail->AltBody = strip_tags($message); // Plain text fallback
 
         $mail->send();
         return true;
     } catch (Exception $e) {
-        // Log error for debugging
-        error_log("Email Error: {$mail->ErrorInfo}");
+        error_log("Email Error to {$to}: {$mail->ErrorInfo}");
         return false;
     }
 }
@@ -814,7 +815,20 @@ function createPasswordResetRequest($email)
         </html>
         ";
 
-        sendEmail($email, $subject, $message);
+        $email_sent = sendEmail($email, $subject, $message);
+
+        if (!$email_sent) {
+            // Email failed - delete the reset request we just made
+            $cleanup = $conn->prepare("DELETE FROM password_resets WHERE email = ?");
+            $cleanup->bind_param("s", $email);
+            $cleanup->execute();
+
+            error_log("OTP email failed for: {$email}");
+            return [
+                'success' => false,
+                'message' => 'Failed to send OTP email. Please check your email address and try again.'
+            ];
+        }
 
         return [
             'success' => true,

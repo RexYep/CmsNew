@@ -22,7 +22,7 @@ function sendEmailSMTP($to, $subject, $message) {
         $mail->Host       = getenv('MAIL_HOST')     ?: 'smtp.gmail.com';
         $mail->SMTPAuth   = true;
         $mail->Username   = getenv('MAIL_USERNAME')  ?: 'cmsproperty@gmail.com';
-        $mail->Password   = getenv('MAIL_PASSWORD')  ?: 'abcd eeee eee efrr'; 
+        $mail->Password   = getenv('MAIL_PASSWORD')  ?: ''; 
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port       = (int)(getenv('MAIL_PORT') ?: 587); 
 
