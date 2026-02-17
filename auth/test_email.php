@@ -15,6 +15,10 @@
 
 require_once '../config/config.php';
 
+ require_once '../vendor/autoload.php';
+                use PHPMailer\PHPMailer\PHPMailer;
+                use PHPMailer\PHPMailer\Exception;
+                use PHPMailer\PHPMailer\SMTP;
 // Security: only allow if logged in as admin OR via secret key
 $secret = $_GET['key'] ?? '';
 if ($secret !== 'debug2026') {
@@ -98,13 +102,11 @@ $mail_password = getenv('MAIL_PASSWORD') ?: '(not set)';
             <?php
             if (!file_exists('../vendor/autoload.php')) {
                 echo '<div class="alert alert-danger">❌ vendor/autoload.php not found! Run: composer install</div>';
-            } else {
-                require_once '../vendor/autoload.php';
-                use PHPMailer\PHPMailer\PHPMailer;
-                use PHPMailer\PHPMailer\Exception;
-                use PHPMailer\PHPMailer\SMTP;
 
-                $mail = new PHPMailer(true);
+            } else {
+               
+
+              $mail = new PHPMailer(true);
                 $debugOutput = '';
 
                 try {
