@@ -6,6 +6,7 @@
 
 // Determine user role and current page
 $current_page = basename($_SERVER['PHP_SELF']);
+$current_dir  = basename(dirname($_SERVER['PHP_SELF'])); // 'admin', 'user', 'auth', etc.
 $is_admin = isAdmin();
 $is_user = isUser();
 $pending_review = $conn->query("SELECT COUNT(*) as count FROM complaints WHERE approval_status = 'pending_review'")->fetch_assoc()['count']; ?>
