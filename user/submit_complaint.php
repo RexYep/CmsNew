@@ -53,32 +53,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Description must be at least 20 characters long';
     } else {
         // Insert complaint
-        $stmt = $conn->prepare("INSERT INTO complaints (user_id, category_id, subject, description, priority, status) VALUES (?, ?, ?, ?, ?, 'Pending')");
+     $stmt = $conn->prepare("INSERT INTO complaints (user_id, category_id, subject, description, priority, status) VALUES (?, ?, ?, ?, ?, 'Pending')");
         $stmt->bind_param("iisss", $user_id, $category_id, $subject, $description, $priority);
-        
+
         if ($stmt->execute()) {
             $complaint_id = $conn->insert_id;
             
-            // Handle file uploads
+            // Handle file uploads with CLOUDINARY
             $upload_success = true;
             $uploaded_files = [];
             
             if (!empty($_FILES['attachments']['name'][0])) {
-                $upload_dir = '../uploads/complaints/';
-                $db_path = 'uploads/complaints/'; // Path to store in database
-                
-                // Create directory if it doesn't exist
-                if (!file_exists($upload_dir)) {
-                    mkdir($upload_dir, 0777, true);
-                }
-      $allowed_types = [
-    'image/jpeg', 'image/png', 'image/gif', 
-    'application/pdf', 
-    'application/msword', 
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/webm'
-    ];
-      $max_file_size = 50 * 1024 * 1024; // 50MB (increased for videos)
+                $allowed_types = [
+                    'image/jpeg', 'image/png', 'image/gif', 
+                    'application/pdf', 
+                    'application/msword', 
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/webm'
+                ];
+                $max_file_size = 50 * 1024 * 1024; // 50MB (for videos)
                 
                 foreach ($_FILES['attachments']['tmp_name'] as $key => $tmp_name) {
                     if ($_FILES['attachments']['error'][$key] === 0) {
@@ -95,27 +88,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         
                         // Validate file size
                         if ($file_size > $max_file_size) {
-                            $error = "File too large (max 5MB): $file_name";
+                            $error = "File too large (max 50MB): $file_name";
                             $upload_success = false;
                             break;
                         }
                         
-                        // Generate unique filename
-                        $file_extension = pathinfo($file_name, PATHINFO_EXTENSION);
-                        $unique_name = 'complaint_' . $complaint_id . '_' . time() . '_' . $key . '.' . $file_extension;
-                        $file_path = $upload_dir . $unique_name;
-                        $db_file_path = $db_path . $unique_name; // Path for database
+                        // Prepare file array for Cloudinary upload
+                        $file_array = [
+                            'name' => $file_name,
+                            'type' => $file_type,
+                            'tmp_name' => $tmp_name,
+                            'error' => $_FILES['attachments']['error'][$key],
+                            'size' => $file_size
+                        ];
                         
-                        // Move uploaded file
-                        if (move_uploaded_file($tmp_name, $file_path)) {
-                            // Save to database
-                            $stmt = $conn->prepare("INSERT INTO complaint_attachments (complaint_id, file_name, file_path, file_type, file_size) VALUES (?, ?, ?, ?, ?)");
-                            $stmt->bind_param("isssi", $complaint_id, $file_name, $db_file_path, $file_type, $file_size);
+                        // Upload to Cloudinary
+                        $upload_result = uploadToCloudinary($file_array, 'complaints');
+                        
+                        if ($upload_result['success']) {
+                            // Save to database with Cloudinary URLs
+                            $cloudinary_url = $upload_result['url'];
+                            $cloudinary_public_id = $upload_result['public_id'];
+                            $cloudinary_resource_type = $upload_result['resource_type'];
+                            
+                            $stmt = $conn->prepare("INSERT INTO complaint_attachments (complaint_id, file_name, file_path, cloudinary_url, cloudinary_public_id, cloudinary_resource_type, file_type, file_size) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                            $stmt->bind_param("issssssi", 
+                                $complaint_id, 
+                                $file_name, 
+                                $cloudinary_url, // Store cloudinary URL as file_path for backward compatibility
+                                $cloudinary_url,
+                                $cloudinary_public_id,
+                                $cloudinary_resource_type,
+                                $file_type, 
+                                $file_size
+                            );
                             $stmt->execute();
                             
                             $uploaded_files[] = $file_name;
                         } else {
-                            $error = "Failed to upload file: $file_name";
+                            $error = "Failed to upload file: $file_name - " . $upload_result['error'];
                             $upload_success = false;
                             break;
                         }
@@ -128,14 +139,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bind_param("ii", $complaint_id, $user_id);
             $stmt->execute();
             
-            // Notify all admins about new complaint
-            $admins = $conn->query("SELECT user_id FROM users WHERE role = 'admin' AND status = 'active'");
-            while ($admin = $admins->fetch_assoc()) {
-                $notif_title = "New Complaint Submitted";
-                $notif_message = "Complaint #$complaint_id: " . substr($subject, 0, 50) . "... (Priority: $priority)";
-                $notif_type = ($priority == 'High') ? 'danger' : 'info';
-                createNotification($admin['user_id'], $notif_title, $notif_message, $notif_type, $complaint_id);
-            }
+        // Notify ONLY super admins about new complaint (regular admins get notified when assigned)
+$super_admins = $conn->query("SELECT user_id FROM users WHERE role = 'admin' AND admin_level = 'super_admin' AND status = 'active'");
+while ($admin = $super_admins->fetch_assoc()) {
+    $notif_title = "New Complaint Submitted";
+    $notif_message = "Complaint #$complaint_id: " . substr($subject, 0, 50) . "... (Priority: $priority)";
+    $notif_type = ($priority == 'High') ? 'danger' : 'info';
+    createNotification($admin['user_id'], $notif_title, $notif_message, $notif_type, $complaint_id);
+}
             
             if ($upload_success) {
                 $success = 'Complaint submitted successfully! Tracking ID: #' . $complaint_id;
@@ -176,30 +187,29 @@ include '../includes/navbar.php';
         <?php else: ?>
             <div class="alert alert-danger">
                 <i class="bi bi-exclamation-triangle"></i> 
-                <strong>Limit Reached!</strong> You have reached your daily complaint limit (<?php echo DAILY_COMPLAINT_LIMIT; ?> complaints/day). 
+                <strong>Daily Limit Reached!</strong> You have submitted <?php echo $complaints_today; ?> complaint(s) today. 
                 Please try again tomorrow.
             </div>
         <?php endif; ?>
+
                 <?php if (!empty($error)): ?>
                     <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <i class="bi bi-exclamation-triangle me-2"></i><?php echo $error; ?>
+                        <i class="bi bi-exclamation-triangle"></i> <?php echo $error; ?>
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 <?php endif; ?>
 
                 <?php if (!empty($success)): ?>
                     <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <i class="bi bi-check-circle me-2"></i><?php echo $success; ?>
+                        <i class="bi bi-check-circle"></i> <?php echo $success; ?>
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 <?php endif; ?>
 
-              <form method="POST" action="" enctype="multipart/form-data" <?php echo !$can_submit ? 'style="display:none;"' : ''; ?>>
+                <form method="POST" action="" enctype="multipart/form-data" <?php echo !$can_submit ? 'style="pointer-events: none; opacity: 0.6;"' : ''; ?>>
                     <div class="mb-3">
-                        <label for="category_id" class="form-label">
-                            Category <span class="text-danger">*</span>
-                        </label>
-                        <select class="form-select" id="category_id" name="category_id" required>
+                        <label for="category_id" class="form-label">Category <span class="text-danger">*</span></label>
+                        <select class="form-select" id="category_id" name="category_id" required <?php echo !$can_submit ? 'disabled' : ''; ?>>
                             <option value="">-- Select Category --</option>
                             <?php foreach ($categories as $category): ?>
                                 <option value="<?php echo $category['category_id']; ?>"
@@ -212,10 +222,28 @@ include '../includes/navbar.php';
                     </div>
 
                     <div class="mb-3">
-                        <label for="priority" class="form-label">
-                            Priority <span class="text-danger">*</span>
-                        </label>
-                        <select class="form-select" id="priority" name="priority" required>
+                        <label for="subject" class="form-label">Subject <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="subject" name="subject" 
+                               placeholder="Brief summary of your complaint" 
+                               value="<?php echo isset($subject) ? htmlspecialchars($subject) : ''; ?>" 
+                               minlength="5" required <?php echo !$can_submit ? 'disabled' : ''; ?>>
+                        <small class="text-muted">Minimum 5 characters</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="description" name="description" rows="6" 
+                                  placeholder="Provide detailed information about your complaint..." 
+                                  minlength="20" required <?php echo !$can_submit ? 'disabled' : ''; ?>><?php echo isset($description) ? htmlspecialchars($description) : ''; ?></textarea>
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">Minimum 20 characters</small>
+                            <small id="charCount" class="text-muted">0</small>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="priority" class="form-label">Priority <span class="text-danger">*</span></label>
+                        <select class="form-select" id="priority" name="priority" required <?php echo !$can_submit ? 'disabled' : ''; ?>>
                             <option value="Low" <?php echo (isset($_POST['priority']) && $_POST['priority'] == 'Low') ? 'selected' : ''; ?>>
                                 Low - Not urgent
                             </option>
@@ -228,56 +256,27 @@ include '../includes/navbar.php';
                         </select>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="subject" class="form-label">
-                            Subject <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control" id="subject" name="subject" 
-                               placeholder="Brief description of your complaint" required
-                               minlength="5" maxlength="200"
-                               value="<?php echo isset($subject) ? htmlspecialchars($subject) : ''; ?>">
-                        <small class="text-muted">Minimum 5 characters, maximum 200 characters</small>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="description" class="form-label">
-                            Detailed Description <span class="text-danger">*</span>
-                        </label>
-                        <textarea class="form-control" id="description" name="description" rows="8" 
-                                  placeholder="Provide detailed information about your complaint..." required
-                                  minlength="20"><?php echo isset($description) ? htmlspecialchars($description) : ''; ?></textarea>
-                        <small class="text-muted">
-                            <span id="charCount">0</span> characters (minimum 20 required)
-                        </small>
-                    </div>
-
-                    <!-- File Attachments -->
-                    <div class="mb-3">
+                    <div class="mb-4">
                         <label for="attachments" class="form-label">
                             <i class="bi bi-paperclip"></i> Attachments (Optional)
                         </label>
-                       <input type="file" class="form-control" id="attachments" name="attachments[]" 
-       multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.mp4,.mpeg,.mov,.avi,.webm">
-<small class="text-muted">
-    <i class="bi bi-info-circle"></i> You can upload multiple files:<br>
-    • <strong>Images:</strong> JPG, PNG, GIF (Max 5MB)<br>
-    • <strong>Videos:</strong> MP4, MPEG, MOV, AVI, WEBM (Max 50MB)<br>
-    • <strong>Documents:</strong> PDF, DOC, DOCX (Max 5MB)
-</small>
-                        <div id="fileList" class="mt-2"></div>
-                    </div>
-
-                    <div class="alert alert-info">
-                        <i class="bi bi-info-circle"></i> 
-                        <strong>Note:</strong> All fields marked with <span class="text-danger">*</span> are required. 
-                        Please provide as much detail as possible to help us resolve your complaint quickly.
+                        <input type="file" class="form-control" id="attachments" name="attachments[]" 
+                               multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.mp4,.mpeg,.mov,.avi,.webm"
+                               <?php echo !$can_submit ? 'disabled' : ''; ?>>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> You can upload multiple files:<br>
+                            • <strong>Images:</strong> JPG, PNG, GIF (Max 5MB)<br>
+                            • <strong>Videos:</strong> MP4, MPEG, MOV, AVI, WEBM (Max 50MB)<br>
+                            • <strong>Documents:</strong> PDF, DOC, DOCX (Max 5MB)
+                        </small>
+                        <div id="fileList"></div>
                     </div>
 
                     <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-primary" <?php echo !$can_submit ? 'disabled' : ''; ?>>
                             <i class="bi bi-send"></i> Submit Complaint
                         </button>
-                        <button type="reset" class="btn btn-outline-secondary">
+                        <button type="reset" class="btn btn-outline-secondary" <?php echo !$can_submit ? 'disabled' : ''; ?>>
                             <i class="bi bi-x-circle"></i> Clear Form
                         </button>
                         <a href="index.php" class="btn btn-outline-secondary ms-auto">
@@ -361,7 +360,7 @@ include '../includes/navbar.php';
                             </div>
                             <div class="col-md-6 text-end">
                                 <span class="badge bg-${fileSize > 50 ? 'danger' : 'success'}">
-                                    ${fileSize > 50 ? 'Too Large!' : 'Ready'}
+                                    ${fileSize > 50 ? 'Too Large!' : 'Ready for Cloudinary'}
                                 </span>
                             </div>
                         </div>

@@ -18,16 +18,41 @@ $success = '';
 // Get user data
 $user = getUserById($user_id);
 
-// Handle profile picture upload
+// Handle profile picture upload with CLOUDINARY
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_picture'])) {
     if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === 0) {
-        $result = uploadProfilePicture($_FILES['profile_picture'], $user_id);
-        
-        if ($result['success']) {
-            $success = $result['message'];
-            $user = getUserById($user_id); // Refresh user data
+
+        $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+        if (!in_array($_FILES['profile_picture']['type'], $allowed_types)) {
+            $error = 'Only JPG, PNG, and GIF images are allowed';
+        } elseif ($_FILES['profile_picture']['size'] > 2 * 1024 * 1024) {
+            $error = 'Avatar size must not exceed 2MB';
         } else {
-            $error = $result['message'];
+            // Delete old avatar from Cloudinary if exists
+            if (!empty($user['avatar_public_id'])) {
+                deleteFromCloudinary($user['avatar_public_id'], 'image');
+            }
+
+            // Upload new avatar to Cloudinary
+            $upload_result = uploadToCloudinary($_FILES['profile_picture'], 'avatars');
+
+            if ($upload_result['success']) {
+                $avatar_url = $upload_result['url'];
+                $avatar_public_id = $upload_result['public_id'];
+
+                $stmt = $conn->prepare("UPDATE users SET profile_picture = ?, avatar_url = ?, avatar_public_id = ? WHERE user_id = ?");
+                $stmt->bind_param("sssi", $avatar_url, $avatar_url, $avatar_public_id, $user_id);
+
+                if ($stmt->execute()) {
+                    $success = 'Profile picture updated successfully!';
+                    $_SESSION['avatar_url'] = $avatar_url;
+                    $user = getUserById($user_id);
+                } else {
+                    $error = 'Database error: ' . $stmt->error;
+                }
+            } else {
+                $error = 'Upload failed: ' . $upload_result['error'];
+            }
         }
     } else {
         $error = 'Please select a file to upload';
@@ -36,13 +61,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_picture'])) {
 
 // Handle profile picture delete
 if (isset($_GET['delete_picture'])) {
-    $result = deleteProfilePicture($user_id);
-    
-    if ($result['success']) {
-        $success = $result['message'];
+    if (!empty($user['avatar_public_id'])) {
+        deleteFromCloudinary($user['avatar_public_id'], 'image');
+    }
+
+    $stmt = $conn->prepare("UPDATE users SET profile_picture = NULL, avatar_url = NULL, avatar_public_id = NULL WHERE user_id = ?");
+    $stmt->bind_param("i", $user_id);
+
+    if ($stmt->execute()) {
+        $success = 'Profile picture deleted successfully';
+        unset($_SESSION['avatar_url']);
         $user = getUserById($user_id);
     } else {
-        $error = $result['message'];
+        $error = 'Failed to delete profile picture';
     }
 }
 
@@ -51,9 +82,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
     $full_name = sanitizeInput($_POST['full_name']);
     $email = sanitizeInput($_POST['email']);
     $phone = sanitizeInput($_POST['phone']);
-    
+
     $result = updateUserProfile($user_id, $full_name, $email, $phone);
-    
+
     if ($result['success']) {
         $success = $result['message'];
         $user = getUserById($user_id);
@@ -67,12 +98,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
     $current_password = $_POST['current_password'];
     $new_password = $_POST['new_password'];
     $confirm_password = $_POST['confirm_password'];
-    
+
     if ($new_password !== $confirm_password) {
         $error = 'New passwords do not match';
     } else {
         $result = changePassword($user_id, $current_password, $new_password);
-        
         if ($result['success']) {
             $success = $result['message'];
         } else {
@@ -85,6 +115,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
 $total_complaints = $conn->query("SELECT COUNT(*) as total FROM complaints")->fetch_assoc()['total'];
 $pending_complaints = $conn->query("SELECT COUNT(*) as total FROM complaints WHERE status = 'Pending'")->fetch_assoc()['total'];
 $resolved_complaints = $conn->query("SELECT COUNT(*) as total FROM complaints WHERE status = 'Resolved'")->fetch_assoc()['total'];
+
+// Determine avatar display
+if (!empty($user['avatar_url'])) {
+    $avatar_display = getOptimizedImageUrl($user['avatar_url'], 150, 150);
+    $has_avatar = true;
+} elseif (!empty($user['profile_picture']) && file_exists('../' . $user['profile_picture'])) {
+    $avatar_display = SITE_URL . $user['profile_picture'];
+    $has_avatar = true;
+} else {
+    $has_avatar = false;
+    $avatar_display = '';
+}
 
 include '../includes/header.php';
 include '../includes/navbar.php';
@@ -103,7 +145,6 @@ include '../includes/navbar.php';
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 <?php endif; ?>
-
                 <?php if (!empty($success)): ?>
                     <div class="alert alert-success alert-dismissible fade show" role="alert">
                         <i class="bi bi-check-circle me-2"></i><?php echo $success; ?>
@@ -115,24 +156,22 @@ include '../includes/navbar.php';
                     <div class="row mb-3">
                         <div class="col-md-12">
                             <label for="full_name" class="form-label">Full Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="full_name" name="full_name" 
+                            <input type="text" class="form-control" id="full_name" name="full_name"
                                    value="<?php echo htmlspecialchars($user['full_name']); ?>" required>
                         </div>
                     </div>
-
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="email" class="form-label">Email Address <span class="text-danger">*</span></label>
-                            <input type="email" class="form-control" id="email" name="email" 
+                            <input type="email" class="form-control" id="email" name="email"
                                    value="<?php echo htmlspecialchars($user['email']); ?>" required>
                         </div>
                         <div class="col-md-6">
                             <label for="phone" class="form-label">Phone Number</label>
-                            <input type="tel" class="form-control" id="phone" name="phone" 
+                            <input type="tel" class="form-control" id="phone" name="phone"
                                    value="<?php echo htmlspecialchars($user['phone'] ?? ''); ?>">
                         </div>
                     </div>
-
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label class="form-label">Account Type</label>
@@ -143,15 +182,13 @@ include '../includes/navbar.php';
                             <input type="text" class="form-control" value="<?php echo ucfirst($user['status']); ?>" readonly>
                         </div>
                     </div>
-
                     <div class="row mb-3">
                         <div class="col-md-12">
                             <label class="form-label">Member Since</label>
-                            <input type="text" class="form-control" 
+                            <input type="text" class="form-control"
                                    value="<?php echo formatDateTime($user['created_at']); ?>" readonly>
                         </div>
                     </div>
-
                     <div class="d-flex gap-2">
                         <button type="submit" name="update_profile" class="btn btn-primary">
                             <i class="bi bi-save"></i> Update Profile
@@ -177,19 +214,16 @@ include '../includes/navbar.php';
                             <input type="password" class="form-control" id="current_password" name="current_password" required>
                         </div>
                     </div>
-
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="new_password" class="form-label">New Password <span class="text-danger">*</span></label>
-                            <input type="password" class="form-control" id="new_password" name="new_password" required>
-                            <small class="text-muted">Min 8 characters, uppercase, lowercase, and numbers</small>
+                            <input type="password" class="form-control" id="new_password" name="new_password" minlength="8" required>
                         </div>
                         <div class="col-md-6">
                             <label for="confirm_password" class="form-label">Confirm New Password <span class="text-danger">*</span></label>
                             <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
                         </div>
                     </div>
-
                     <button type="submit" name="change_password" class="btn btn-warning">
                         <i class="bi bi-shield-lock"></i> Change Password
                     </button>
@@ -198,7 +232,7 @@ include '../includes/navbar.php';
         </div>
     </div>
 
-    <!-- Profile Summary -->
+    <!-- Profile Summary Card -->
     <div class="col-lg-4">
         <div class="card">
             <div class="card-header bg-light">
@@ -206,30 +240,29 @@ include '../includes/navbar.php';
             </div>
             <div class="card-body text-center">
                 <div class="position-relative d-inline-block mb-3">
-                    <?php if ($user['profile_picture'] && file_exists('../' . $user['profile_picture'])): ?>
-                    <img src="<?php echo SITE_URL . $user['profile_picture']; ?>" 
-                         class="rounded-circle" 
-                         width="100" 
-                         height="100" 
-                         style="object-fit: cover; border: 3px solid #667eea;"
-                         alt="Profile Picture">
-                <?php else: ?>
-                    <div class="user-avatar mx-auto" style="width: 100px; height: 100px; font-size: 3rem;">
-                        <?php echo strtoupper(substr($user['full_name'], 0, 1)); ?>
-                    </div>
-                <?php endif; ?>
-                
-                <!-- Upload Button -->
-                <button type="button" class="btn btn-sm btn-primary rounded-circle position-absolute" 
-                        style="bottom: 5px; right: 5px; width: 35px; height: 35px; padding: 0; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"
-                        data-bs-toggle="modal" 
-                        data-bs-target="#uploadPictureModal">
-                    <i class="bi bi-camera"></i>
-                </button>
+                    <?php if ($has_avatar): ?>
+                        <img src="<?php echo htmlspecialchars($avatar_display); ?>"
+                             class="rounded-circle"
+                             width="100"
+                             height="100"
+                             style="object-fit: cover; border: 3px solid #667eea;"
+                             alt="Profile Picture">
+                    <?php else: ?>
+                        <div class="user-avatar mx-auto" style="width: 100px; height: 100px; font-size: 3rem;">
+                            <?php echo strtoupper(substr($user['full_name'], 0, 1)); ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <button type="button" class="btn btn-sm btn-primary rounded-circle position-absolute"
+                            style="bottom: 5px; right: 5px; width: 35px; height: 35px; padding: 0; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"
+                            data-bs-toggle="modal"
+                            data-bs-target="#uploadPictureModal">
+                        <i class="bi bi-camera"></i>
+                    </button>
                 </div>
                 <h5><?php echo htmlspecialchars($user['full_name']); ?></h5>
                 <p class="text-muted mb-3"><?php echo htmlspecialchars($user['email']); ?></p>
-                
+
                 <div class="d-grid gap-2">
                     <span class="badge bg-danger p-2">
                         <i class="bi bi-shield-check"></i> Administrator
@@ -277,8 +310,8 @@ include '../includes/navbar.php';
     </div>
 </div>
 
-</div> <!-- End page-content -->
-</div> <!-- End main-content -->
+</div>
+</div>
 
 <!-- Upload Picture Modal -->
 <div class="modal fade" id="uploadPictureModal" tabindex="-1">
@@ -292,16 +325,12 @@ include '../includes/navbar.php';
             </div>
             <form method="POST" enctype="multipart/form-data">
                 <div class="modal-body">
-                    <!-- Current Picture Preview -->
                     <div class="text-center mb-3">
                         <div id="imagePreview" class="mb-3">
-                            <?php if ($user['profile_picture'] && file_exists('../' . $user['profile_picture'])): ?>
-                                <img src="<?php echo SITE_URL . $user['profile_picture']; ?>" 
-                                     class="rounded-circle" 
-                                     width="150" 
-                                     height="150" 
-                                     style="object-fit: cover;"
-                                     id="currentImage">
+                            <?php if ($has_avatar): ?>
+                                <img src="<?php echo htmlspecialchars($avatar_display); ?>"
+                                     class="rounded-circle" width="150" height="150"
+                                     style="object-fit: cover;" id="currentImage">
                             <?php else: ?>
                                 <div class="user-avatar mx-auto" style="width: 150px; height: 150px; font-size: 4rem;">
                                     <?php echo strtoupper(substr($user['full_name'], 0, 1)); ?>
@@ -310,21 +339,16 @@ include '../includes/navbar.php';
                         </div>
                     </div>
 
-                    <!-- File Input -->
                     <div class="mb-3">
                         <label class="form-label">Choose Picture</label>
-                        <input type="file" 
-                               class="form-control" 
-                               name="profile_picture" 
+                        <input type="file" class="form-control" name="profile_picture"
                                accept="image/jpeg,image/png,image/jpg,image/gif"
-                               id="profilePictureInput"
-                               required>
+                               id="profilePictureInput" required>
                         <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> JPG, PNG, GIF - Max 2MB
+                            <i class="bi bi-info-circle"></i> JPG, PNG, GIF - Max 2MB - Uploaded to Cloudinary
                         </small>
                     </div>
 
-                    <!-- Preview -->
                     <div id="previewContainer" style="display: none;">
                         <label class="form-label">Preview:</label>
                         <div class="text-center">
@@ -333,16 +357,15 @@ include '../includes/navbar.php';
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <?php if ($user['profile_picture']): ?>
-                        <a href="?delete_picture=1" 
-                           class="btn btn-danger me-auto"
-                           onclick="return confirm('Delete profile picture?');">
+                    <?php if ($has_avatar): ?>
+                        <a href="?delete_picture=1" class="btn btn-danger me-auto"
+                           onclick="return confirm('Delete profile picture from Cloudinary?');">
                             <i class="bi bi-trash"></i> Delete
                         </a>
                     <?php endif; ?>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" name="upload_picture" class="btn btn-primary">
-                        <i class="bi bi-upload"></i> Upload
+                        <i class="bi bi-upload"></i> Upload to Cloud
                     </button>
                 </div>
             </form>
@@ -351,7 +374,6 @@ include '../includes/navbar.php';
 </div>
 
 <script>
-// Preview image before upload
 document.getElementById('profilePictureInput').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (file) {

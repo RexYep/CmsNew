@@ -1,0 +1,81 @@
+# ============================================
+# RENDER DEPLOYMENT CONFIGURATION
+# complaint-management-system/render.yaml
+# ============================================
+# This file tells Render how to build and run your app
+# Docs: https://render.com/docs/yaml-spec
+# ============================================
+
+services:
+  - type: web
+    name: complaint-management-system
+    env: php
+    region: singapore # Closest to Philippines
+    plan: free # Change to 'starter' for production (no sleep)
+    branch: main # Your GitHub branch name
+
+    # Build: install dependencies
+    buildCommand: composer install --no-dev --optimize-autoloader
+
+    # Start: run PHP built-in server
+    startCommand: php -S 0.0.0.0:$PORT -t .
+
+    # Health check endpoint
+    healthCheckPath: /auth/login.php
+
+    # Auto-deploy when you push to GitHub
+    autoDeploy: true
+
+    # -----------------------------------------------
+    # ENVIRONMENT VARIABLES
+    # These are set here as reference only.
+    # For sensitive values (passwords, secrets),
+    # set them in Render Dashboard > Environment
+    # and leave the value blank here (sync: false)
+    # -----------------------------------------------
+    envVars:
+      # Application
+      - key: SITE_URL
+        value: https://your-app-name.onrender.com/ # Change this to your Render URL
+
+      - key: APP_ENV
+        value: production
+
+      # Database (Aiven) - Set actual values in Render Dashboard
+      - key: DATABASE_HOST
+        sync: false # Set in Render Dashboard
+
+      - key: DATABASE_PORT
+        sync: false # Set in Render Dashboard
+
+      - key: DATABASE_NAME
+        sync: false # Set in Render Dashboard
+
+      - key: DATABASE_USER
+        sync: false # Set in Render Dashboard
+
+      - key: DATABASE_PASSWORD
+        sync: false # Set in Render Dashboard
+
+      # Cloudinary - Set actual values in Render Dashboard
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false # Set in Render Dashboard
+
+      - key: CLOUDINARY_API_KEY
+        sync: false # Set in Render Dashboard
+
+      - key: CLOUDINARY_API_SECRET
+        sync: false # Set in Render Dashboard
+
+      # Email - Set actual values in Render Dashboard
+      - key: MAIL_HOST
+        value: smtp.gmail.com
+
+      - key: MAIL_PORT
+        value: 587
+
+      - key: MAIL_USERNAME
+        sync: false # Set in Render Dashboard
+
+      - key: MAIL_PASSWORD
+        sync: false # Set in Render Dashboard

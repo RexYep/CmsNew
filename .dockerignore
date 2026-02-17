@@ -1,0 +1,51 @@
+# ============================================
+
+# .dockerignore
+
+# Excludes files from Docker build context
+
+# ============================================
+
+# Sensitive files
+
+.env
+\*.env
+
+# Dependencies (will be installed during build)
+
+vendor/
+
+# Git files
+
+.git/
+.gitignore
+
+# Local uploads (should be in Cloudinary)
+
+uploads/complaints/_
+uploads/avatars/_
+
+# IDE files
+
+.vscode/
+.idea/
+
+# OS files
+
+.DS_Store
+Thumbs.db
+
+# Logs
+
+\*.log
+
+# Documentation
+
+_.md
+README_
+
+# Deployment files (not needed inside container)
+
+Dockerfile
+docker-compose.yml
+render.yaml

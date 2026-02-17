@@ -4,22 +4,63 @@
 // config/database.php
 // ============================================
 
-// Database Configuration Constants
-define('DB_HOST', 'localhost');      // Database host
-define('DB_USER', 'root');           // Database username
-define('DB_PASS', 'Rynld.21');               // Database password (empty for XAMPP default)
-define('DB_NAME', 'complaint_management_system');  // Database name
+// Database Configuration
+// Uses environment variables in production (Render + Aiven)
+// Falls back to local values for development (XAMPP)
 
-// Create connection
-$conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+$host     = getenv('DATABASE_HOST') ?: 'localhost';
+$username = getenv('DATABASE_USER') ?: 'root';
+$password = getenv('DATABASE_PASSWORD') ?: 'Rynld.21';
+$dbname   = getenv('DATABASE_NAME') ?: 'complaint_management_system';
+$port     = (int)(getenv('DATABASE_PORT') ?: 3306);
 
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+// Detect if running in production (Render)
+$is_production = getenv('DATABASE_HOST') !== false;
+
+if ($is_production) {
+    // ============================================
+    // PRODUCTION: Aiven MySQL with SSL
+    // ============================================
+    $conn = mysqli_init();
+
+    if (!$conn) {
+        die("mysqli_init failed");
+    }
+
+    // Enable SSL (required for Aiven)
+    mysqli_ssl_set($conn, NULL, NULL, NULL, NULL, NULL);
+
+    $connected = mysqli_real_connect(
+        $conn,
+        $host,
+        $username,
+        $password,
+        $dbname,
+        $port,
+        NULL,
+        MYSQLI_CLIENT_SSL
+    );
+
+    if (!$connected) {
+        die("Connection failed: " . mysqli_connect_error());
+    }
+
+} else {
+    // ============================================
+    // LOCAL DEVELOPMENT: Standard MySQL (XAMPP)
+    // ============================================
+    $conn = new mysqli($host, $username, $password, $dbname, $port);
+
+    if ($conn->connect_error) {
+        die("Connection failed: " . $conn->connect_error);
+    }
 }
 
-// Set charset to utf8mb4 for proper character support
+// Set charset for proper character support
 $conn->set_charset("utf8mb4");
+
+// Set timezone
+date_default_timezone_set('Asia/Manila');
 
 // Function to close database connection
 function closeConnection() {
@@ -28,8 +69,4 @@ function closeConnection() {
         $conn->close();
     }
 }
-
-// Optional: Set timezone
-date_default_timezone_set('Asia/Manila'); // Change to your timezone
-
 ?>

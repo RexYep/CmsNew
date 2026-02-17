@@ -1,0 +1,70 @@
+# ============================================
+# .gitignore
+# complaint-management-system/.gitignore
+# ============================================
+
+# -----------------------------------------------
+# SENSITIVE FILES - Never commit these!
+# -----------------------------------------------
+.env
+*.env
+.env.local
+.env.production
+
+# -----------------------------------------------
+# COMPOSER / VENDOR
+# Render will run composer install automatically
+# -----------------------------------------------
+vendor/
+composer.lock
+
+# -----------------------------------------------
+# UPLOADED FILES
+# These should be in Cloudinary, not GitHub
+# -----------------------------------------------
+uploads/complaints/*
+uploads/avatars/*
+
+# Keep the folder structure but ignore files
+!uploads/complaints/.gitkeep
+!uploads/avatars/.gitkeep
+!uploads/complaints/.htaccess
+!uploads/avatars/.htaccess
+
+# -----------------------------------------------
+# OS FILES
+# -----------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# -----------------------------------------------
+# IDE / EDITOR FILES
+# -----------------------------------------------
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+
+# -----------------------------------------------
+# LOGS & TEMP FILES
+# -----------------------------------------------
+*.log
+*.tmp
+*.cache
+error_log
+php_errors.log
+
+# -----------------------------------------------
+# BACKUP FILES
+# -----------------------------------------------
+*.sql.bak
+*.bak
+*.backup
+*_backup.*
