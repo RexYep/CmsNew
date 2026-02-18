@@ -577,39 +577,6 @@ function exportTableToCSV(tableId, filename = "export.csv") {
   document.body.removeChild(link);
 }
 
-// Force text colors in dark mode
-document.addEventListener("DOMContentLoaded", function () {
-  function updateDarkModeText() {
-    const isDark =
-      document.documentElement.getAttribute("data-theme") === "dark";
-
-    if (isDark) {
-      // Force all text elements to use correct colors
-      document
-        .querySelectorAll("p, span, div, td, th, li, label")
-        .forEach((el) => {
-          if (
-            window.getComputedStyle(el).color === "rgb(51, 51, 51)" ||
-            window.getComputedStyle(el).color === "rgb(0, 0, 0)"
-          ) {
-            el.style.color = "var(--text-primary)";
-          }
-        });
-    }
-  }
-
-  // Run on load
-  updateDarkModeText();
-
-  // Run when dark mode toggles
-  const darkModeToggle = document.getElementById("darkModeToggle");
-  if (darkModeToggle) {
-    darkModeToggle.addEventListener("click", function () {
-      setTimeout(updateDarkModeText, 100);
-    });
-  }
-});
-
 // ============================================
 // ADDITIONAL CSS FOR DYNAMIC ELEMENTS
 // ============================================
@@ -623,7 +590,7 @@ style.innerHTML = `
         right: 20px;
         width: 45px;
         height: 45px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+       background: linear-gradient(135deg, #00c2e0 0%, #00e5ff 100%);
         color: white;
         border: none;
         border-radius: 50%;

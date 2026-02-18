@@ -247,10 +247,8 @@ if (!empty($current_user['avatar_url'])) {
         
         <!-- Right side - icons visible on all screens -->
         <div class="navbar-right d-flex align-items-center gap-2">
-            <!-- Dark Mode Toggle - direct inline code -->
             <button class="dark-mode-toggle" 
-                    id="darkModeToggle" 
-                    onclick="var html=document.documentElement; var icon=document.getElementById('darkModeIcon'); var isDark=html.getAttribute('data-theme')==='dark'; if(isDark){html.setAttribute('data-theme','light'); localStorage.setItem('theme','light'); if(icon){icon.classList.remove('bi-sun-fill'); icon.classList.add('bi-moon-stars-fill');}} else{html.setAttribute('data-theme','dark'); localStorage.setItem('theme','dark'); if(icon){icon.classList.remove('bi-moon-stars-fill'); icon.classList.add('bi-sun-fill');}}"
+                    id="darkModeToggle"
                     aria-label="Toggle Dark Mode" 
                     title="Toggle Dark Mode">
                 <i class="bi bi-moon-stars-fill" id="darkModeIcon"></i>

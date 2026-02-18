@@ -5,8 +5,8 @@
 
 /* ========== ROOT VARIABLES ========== */
 :root {
-  --primary-color: #5a5d62; /* ← Soft Charcoal for buttons */
-  --secondary-color: #6b6e73;
+  --primary-color: #00c2e0; /* cyan accent */
+  --secondary-color: #0d1b2a; /* navy */
   --sidebar-width: 260px;
   --topnav-height: 70px;
   --success-color: #28a745;
@@ -41,18 +41,18 @@
 
 /* Dark mode colors */
 [data-theme="dark"] {
-  --light-bg: #2b2d31; /* Soft charcoal */
-  --dark-text: #eff1f3; /* Bright gray-white */
-  --bg-primary: #2b2d31; /* Main background */
-  --bg-secondary: #3f4247; /* Secondary - medium gray */
-  --text-primary: #eff1f3; /* Main text - very light */
-  --text-secondary: #bfc3c9; /* Secondary text - medium gray */
-  --border-color: #52555a; /* Borders - mid-tone */
-  --card-bg: #3f4247; /* Cards - lighter gray */
-  --input-bg: #35383c; /* Inputs - darker gray */
-  --input-border: #52555a; /* Input borders */
-  --box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
-  --table-hover-bg: #52555a; /* Table hover */
+  --light-bg: #0d1b2a;
+  --dark-text: #e2eaf3;
+  --bg-primary: #0d1b2a; /* navy main */
+  --bg-secondary: #132236; /* navy secondary */
+  --text-primary: #e2eaf3;
+  --text-secondary: #8fa3b8;
+  --border-color: rgba(0, 194, 224, 0.15);
+  --card-bg: #111e2e; /* card navy */
+  --input-bg: #0d1b2a;
+  --input-border: rgba(0, 194, 224, 0.2);
+  --box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  --table-hover-bg: #1a2f48;
 }
 
 /* Dark mode - force text colors on all elements */
@@ -116,13 +116,11 @@
 
 /* Fix links in dark mode */
 [data-theme="dark"] a {
-  color: #7dd3fc;
+  color: #00c2e0;
 }
-
 [data-theme="dark"] a:hover {
-  color: #38bdf8;
+  color: #00e5ff;
 }
-
 /* Fix text-muted in dark mode */
 [data-theme="dark"] .text-muted {
   color: var(--text-secondary) !important;
@@ -365,7 +363,7 @@
 
 /* Stats card text colors in dark mode */
 [data-theme="dark"] .stats-card h2 {
-  color: #667eea !important;
+  color: #00c2e0 !important;
 }
 
 [data-theme="dark"] .stats-card h6 {
@@ -477,11 +475,7 @@ a:hover {
   left: 0;
   height: 100vh;
   width: var(--sidebar-width);
-  background: linear-gradient(
-    180deg,
-    #4a4d52 0%,
-    /* ← Charcoal Gray (darker) */ #6b6e73 100% /* ← Light Charcoal (lighter) */
-  );
+  background: linear-gradient(180deg, #0d1b2a 0%, #1a2f48 100%);
   padding: 20px 0;
   z-index: 1000;
   box-shadow: 2px 0 15px rgba(0, 0, 0, 0.1);
@@ -543,14 +537,14 @@ a:hover {
 .sidebar-menu a:hover {
   background: rgba(255, 255, 255, 0.15);
   color: white;
-  border-left-color: white;
+  border-left-color: #00c2e0;
   padding-left: 30px;
 }
 
 .sidebar-menu a.active {
   background: rgba(255, 255, 255, 0.2);
   color: white;
-  border-left-color: white;
+  border-left-color: #00c2e0;
   font-weight: 600;
 }
 
@@ -1357,7 +1351,7 @@ a:hover {
   right: 20px;
   width: 45px;
   height: 45px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #00c2e0 0%, #00e5ff 100%);
   color: white;
   border: none;
   border-radius: 50%;
@@ -1437,14 +1431,9 @@ a:hover {
 /* Fix sidebar + admin panel */
 [data-theme="dark"] .sidebar,
 [data-theme="dark"] .admin-sidebar {
-  background: linear-gradient(
-    180deg,
-    #2b2d31 0%,
-    /* ← Deep Charcoal (darker) */ #3f4247 100%
-      /* ← Medium Charcoal (lighter) */
-  ) !important;
+  background: linear-gradient(180deg, #080f1a 0%, #0d1b2a 100%) !important;
   color: var(--text-primary) !important;
-  box-shadow: 2px 0 15px rgba(0, 0, 0, 0.5) !important;
+  box-shadow: 2px 0 15px rgba(0, 0, 0, 0.6) !important;
 }
 
 /* ========== FILE UPLOAD PREVIEW STYLES ========== */
