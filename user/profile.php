@@ -427,7 +427,7 @@ include '../includes/navbar.php';
                     <?php endif; ?>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" name="upload_picture" class="btn btn-primary">
-                        <i class="bi bi-upload"></i> Upload to Cloud
+                        <i class="bi bi-upload"></i> Upload
                     </button>
                 </div>
             </form>
