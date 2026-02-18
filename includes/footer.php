@@ -146,7 +146,7 @@ window.addEventListener('beforeunload', function() {
 });
 
 // Add CSS animation for pulse effect
-const style = document.createElement('style');
+const pulseStyle = document.createElement('style');
 style.textContent = `
     @keyframes pulse {
         0%, 100% {
@@ -164,7 +164,7 @@ style.textContent = `
         transform: translateX(3px);
     }
 `;
-document.head.appendChild(style);
+document.head.appendChild(pulseStyle);
 
 // 2
 

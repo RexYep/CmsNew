@@ -9,11 +9,8 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
  use Cloudinary\Configuration\Configuration;
-// ============================================
 // LOAD .env FILE (LOCAL DEVELOPMENT ONLY)
-// In production (Render), env vars are set
-// in the Render Dashboard automatically
-// ============================================
+
 $env_file = dirname(__DIR__) . '/.env';
 if (file_exists($env_file)) {
     $lines = file($env_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);

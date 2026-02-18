@@ -70,11 +70,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Toggle sidebar
   function toggleSidebar(e) {
-    if (e) e.stopPropagation();
-    if (sidebar && sidebar.classList.contains("active")) {
-      closeSidebar();
-    } else {
-      openSidebar();
+    try {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      if (sidebar && sidebar.classList.contains("active")) {
+        closeSidebar();
+      } else {
+        openSidebar();
+      }
+    } catch (error) {
+      console.error("Sidebar toggle error:", error);
     }
   }
 
@@ -90,7 +97,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Close button inside sidebar
   if (sidebarCloseBtn) {
-    sidebarCloseBtn.addEventListener("click", closeSidebar);
+    sidebarCloseBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      closeSidebar();
+    });
   }
 
   // Close when clicking overlay
@@ -264,22 +275,26 @@ document.addEventListener("DOMContentLoaded", function () {
   // DATA TABLE INITIALIZATION (if using DataTables plugin)
   // ============================================
 
-  if (typeof $.fn.DataTable !== "undefined") {
-    $(".data-table").DataTable({
-      responsive: true,
-      pageLength: 10,
-      language: {
-        search: "Search:",
-        lengthMenu: "Show _MENU_ entries",
-        info: "Showing _START_ to _END_ of _TOTAL_ entries",
-        paginate: {
-          first: "First",
-          last: "Last",
-          next: "Next",
-          previous: "Previous",
+  try {
+    if (typeof $ !== "undefined" && typeof $.fn.DataTable !== "undefined") {
+      $(".data-table").DataTable({
+        responsive: true,
+        pageLength: 10,
+        language: {
+          search: "Search:",
+          lengthMenu: "Show _MENU_ entries",
+          info: "Showing _START_ to _END_ of _TOTAL_ entries",
+          paginate: {
+            first: "First",
+            last: "Last",
+            next: "Next",
+            previous: "Previous",
+          },
         },
-      },
-    });
+      });
+    }
+  } catch (error) {
+    // jQuery or DataTables not loaded - skip
   }
 
   // ============================================

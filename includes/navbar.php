@@ -12,12 +12,17 @@ $is_user = isUser();
 $pending_review = $conn->query("SELECT COUNT(*) as count FROM complaints WHERE approval_status = 'pending_review'")->fetch_assoc()['count']; ?>
 
 <!-- Sidebar Overlay (dark background kapag bukas ang sidebar sa mobile) -->
-<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="sidebar-overlay" 
+     id="sidebarOverlay"
+     onclick="document.getElementById('sidebar').classList.remove('active'); this.classList.remove('active'); document.body.style.overflow='';"></div>
 
 <!-- Sidebar Navigation -->
 <div class="sidebar" id="sidebar">
     <!-- Close button - visible sa mobile lang -->
-    <button class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Close Sidebar">
+    <button class="sidebar-close-btn" 
+            id="sidebarCloseBtn" 
+            onclick="document.getElementById('sidebar').classList.remove('active'); document.getElementById('sidebarOverlay').classList.remove('active'); document.body.style.overflow='';"
+            aria-label="Close Sidebar">
         <i class="bi bi-x-lg"></i>
     </button>
     <div class="sidebar-brand">
@@ -209,38 +214,47 @@ $pending_review = $conn->query("SELECT COUNT(*) as count FROM complaints WHERE a
     <!-- Top Navbar -->
     <div class="top-navbar">
         <div class="navbar-left">
-            <button class="btn btn-link d-md-none p-0 me-3" id="mobileSidebarToggle">
-                <i class="bi bi-list" style="font-size: 1.5rem; color: #667eea;"></i>
+            <!-- Mobile hamburger button with direct inline code -->
+            <button class="mobile-menu-btn d-md-none" 
+                    id="mobileSidebarToggle" 
+                    onclick="document.getElementById('sidebar').classList.toggle('active'); document.getElementById('sidebarOverlay').classList.toggle('active'); document.body.style.overflow = document.getElementById('sidebar').classList.contains('active') ? 'hidden' : '';"
+                    aria-label="Menu">
+                <i class="bi bi-list"></i>
             </button>
-            <div>
-                <h5 class="mb-0"><?php echo isset($page_title) ? $page_title : 'Dashboard'; ?></h5>
-                <small class="text-muted">
+            <div class="page-title-wrapper">
+                <h5 class="mb-0 page-title"><?php echo isset($page_title) ? $page_title : 'Dashboard'; ?></h5>
+                <small class="text-muted d-none d-sm-block page-date">
                     <i class="bi bi-calendar3"></i> <?php echo date('l, F j, Y'); ?>
                 </small>
             </div>
         </div>
         
-        <div class="user-info d-none d-md-flex">
-            <!-- Dark Mode Toggle -->
-            <button class="dark-mode-toggle" id="darkModeToggle" aria-label="Toggle Dark Mode">
+        <!-- Right side - icons visible on all screens -->
+        <div class="navbar-right d-flex align-items-center gap-2">
+            <!-- Dark Mode Toggle - direct inline code -->
+            <button class="dark-mode-toggle" 
+                    id="darkModeToggle" 
+                    onclick="var html=document.documentElement; var icon=document.getElementById('darkModeIcon'); var isDark=html.getAttribute('data-theme')==='dark'; if(isDark){html.setAttribute('data-theme','light'); localStorage.setItem('theme','light'); if(icon){icon.classList.remove('bi-sun-fill'); icon.classList.add('bi-moon-stars-fill');}} else{html.setAttribute('data-theme','dark'); localStorage.setItem('theme','dark'); if(icon){icon.classList.remove('bi-moon-stars-fill'); icon.classList.add('bi-sun-fill');}}"
+                    aria-label="Toggle Dark Mode" 
+                    title="Toggle Dark Mode">
                 <i class="bi bi-moon-stars-fill" id="darkModeIcon"></i>
             </button>
             
-            <!-- Notification Bell -->
+            <!-- Notification Bell - always visible -->
             <?php 
             $unread_count = getUnreadNotificationCount($_SESSION['user_id']);
             $recent_notifications = getRecentNotifications($_SESSION['user_id'], 5);
             ?>
-            <div class="dropdown me-3">
-                <button class="btn btn-link position-relative p-0" type="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="bi bi-bell-fill" style="font-size: 1.5rem; color: #667eea;"></i>
+            <div class="dropdown">
+                <button class="btn btn-link position-relative p-0 notification-btn" type="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
+                    <i class="bi bi-bell-fill" style="font-size: 1.3rem; color: #667eea;"></i>
                     <?php if ($unread_count > 0): ?>
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">
                             <?php echo $unread_count > 9 ? '9+' : $unread_count; ?>
                         </span>
                     <?php endif; ?>
                 </button>
-                <ul class="dropdown-menu dropdown-menu-end notification-dropdown" aria-labelledby="notificationDropdown" style="width: 350px; max-height: 400px; overflow-y: auto;">
+                <ul class="dropdown-menu dropdown-menu-end notification-dropdown" aria-labelledby="notificationDropdown" style="width: 320px; max-height: 400px; overflow-y: auto;">
                     <li class="dropdown-header d-flex justify-content-between align-items-center">
                         <span><strong>Notifications</strong></span>
                         <?php if ($unread_count > 0): ?>
@@ -299,43 +313,52 @@ $pending_review = $conn->query("SELECT COUNT(*) as count FROM complaints WHERE a
                 </ul>
             </div>
             
-           <?php
-// Get current user's profile picture (supports both local and Cloudinary)
-$current_user_id = $_SESSION['user_id'];
-$stmt = $conn->prepare("SELECT profile_picture, avatar_url FROM users WHERE user_id = ?");
-$stmt->bind_param("i", $current_user_id);
-$stmt->execute();
-$current_user = $stmt->get_result()->fetch_assoc();
+            <!-- User Profile - avatar visible on all screens, name/email hidden on mobile -->
+            <?php
+            // Get current user's profile picture (supports both local and Cloudinary)
+            $current_user_id = $_SESSION['user_id'];
+            $stmt = $conn->prepare("SELECT profile_picture, avatar_url FROM users WHERE user_id = ?");
+            $stmt->bind_param("i", $current_user_id);
+            $stmt->execute();
+            $current_user = $stmt->get_result()->fetch_assoc();
 
-// Priority: avatar_url (Cloudinary) → profile_picture (local) → initials
-$profile_img_url = '';
-if (!empty($current_user['avatar_url'])) {
-    $profile_img_url = $current_user['avatar_url']; // Cloudinary URL
-} elseif (!empty($current_user['profile_picture'])) {
-    $profile_img_url = SITE_URL . $current_user['profile_picture']; // Local path
-}
-?>
+            // Priority: avatar_url (Cloudinary) → profile_picture (local) → initials
+            $profile_img_url = '';
+            if (!empty($current_user['avatar_url'])) {
+                $profile_img_url = $current_user['avatar_url'];
+            } elseif (!empty($current_user['profile_picture'])) {
+                $profile_img_url = SITE_URL . $current_user['profile_picture'];
+            }
+            ?>
 
-<?php if ($profile_img_url): ?>
-    <img src="<?php echo htmlspecialchars($profile_img_url); ?>" 
-         class="rounded-circle" 
-         width="42" 
-         height="42" 
-         style="object-fit: cover;"
-         alt="Profile">
-<?php else: ?>
-    <div class="user-avatar">
-        <?php echo strtoupper(substr($_SESSION['full_name'], 0, 1)); ?>
-    </div>
-<?php endif; ?>
-            <div class="user-details">
-                <div class="user-name"><?php echo htmlspecialchars($_SESSION['full_name']); ?></div>
-                <small class="text-muted user-email"><?php echo htmlspecialchars($_SESSION['email']); ?></small>
-            </div>
-            <div class="dropdown">
-                <button class="btn btn-link p-0 ms-2" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="bi bi-three-dots-vertical" style="font-size: 1.2rem; color: #667eea;"></i>
+            <div class="dropdown user-profile-dropdown">
+                <button class="btn btn-link p-0 d-flex align-items-center gap-2" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="text-decoration: none;">
+                    <?php if ($profile_img_url): ?>
+                        <img src="<?php echo htmlspecialchars($profile_img_url); ?>" 
+                             class="rounded-circle user-avatar-img" 
+                             width="36" 
+                             height="36" 
+                             style="object-fit: cover;"
+                             alt="Profile">
+                    <?php else: ?>
+                        <div class="user-avatar" style="width: 36px; height: 36px; font-size: 1rem;">
+                            <?php echo strtoupper(substr($_SESSION['full_name'], 0, 1)); ?>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <!-- User name/email - hidden on mobile -->
+                    <div class="user-details d-none d-md-block text-start">
+                        <div class="user-name" style="font-size: 0.9rem; font-weight: 600; line-height: 1.2; color: var(--text-primary);">
+                            <?php echo htmlspecialchars(strlen($_SESSION['full_name']) > 20 ? substr($_SESSION['full_name'], 0, 20) . '...' : $_SESSION['full_name']); ?>
+                        </div>
+                        <small class="text-muted user-email" style="font-size: 0.75rem;">
+                            <?php echo htmlspecialchars(strlen($_SESSION['email']) > 25 ? substr($_SESSION['email'], 0, 25) . '...' : $_SESSION['email']); ?>
+                        </small>
+                    </div>
+                    
+                    <i class="bi bi-chevron-down d-none d-md-block" style="font-size: 0.8rem; color: var(--text-secondary);"></i>
                 </button>
+                
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                     <li>
                         <a class="dropdown-item" href="<?php echo SITE_URL . ($is_admin ? 'admin' : 'user'); ?>/profile.php">
@@ -353,6 +376,104 @@ if (!empty($current_user['avatar_url'])) {
             </div>
         </div>
     </div>
+
+<!-- Inline JavaScript for Mobile Sidebar & Dark Mode (guaranteed to work) -->
+<script>
+// Mobile Sidebar Toggle
+function toggleMobileSidebar(e) {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    
+    if (sidebar) {
+        sidebar.classList.toggle('active');
+    }
+    if (overlay) {
+        overlay.classList.toggle('active');
+    }
+    
+    // Prevent background scroll when sidebar is open
+    if (sidebar && sidebar.classList.contains('active')) {
+        document.body.style.overflow = 'hidden';
+    } else {
+        document.body.style.overflow = '';
+    }
+}
+
+// Close sidebar (for overlay and close button)
+function closeMobileSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    
+    if (sidebar) sidebar.classList.remove('active');
+    if (overlay) overlay.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+// Dark Mode Toggle
+function toggleDarkMode() {
+    const html = document.documentElement;
+    const icon = document.getElementById('darkModeIcon');
+    const isDark = html.getAttribute('data-theme') === 'dark';
+    
+    if (isDark) {
+        html.setAttribute('data-theme', 'light');
+        localStorage.setItem('theme', 'light');
+        if (icon) {
+            icon.classList.remove('bi-sun-fill');
+            icon.classList.add('bi-moon-stars-fill');
+        }
+    } else {
+        html.setAttribute('data-theme', 'dark');
+        localStorage.setItem('theme', 'dark');
+        if (icon) {
+            icon.classList.remove('bi-moon-stars-fill');
+            icon.classList.add('bi-sun-fill');
+        }
+    }
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', function() {
+    // Set initial dark mode state
+    const currentTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    const icon = document.getElementById('darkModeIcon');
+    if (currentTheme === 'dark' && icon) {
+        icon.classList.remove('bi-moon-stars-fill');
+        icon.classList.add('bi-sun-fill');
+    }
+    
+    // Attach event listeners as backup
+    const overlay = document.getElementById('sidebarOverlay');
+    const closeBtn = document.getElementById('sidebarCloseBtn');
+    const mobileToggle = document.getElementById('mobileToggle');
+    
+    if (overlay) overlay.onclick = closeMobileSidebar;
+    if (closeBtn) closeBtn.onclick = closeMobileSidebar;
+    if (mobileToggle) mobileToggle.onclick = toggleMobileSidebar;
+    
+    // Close sidebar when clicking menu items on mobile
+    const sidebarLinks = document.querySelectorAll('.sidebar-menu a');
+    sidebarLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            if (window.innerWidth <= 768) {
+                closeMobileSidebar();
+            }
+        });
+    });
+    
+    // Close sidebar on window resize to desktop
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 768) {
+            closeMobileSidebar();
+        }
+    });
+});
+</script>
     
     <!-- Page Content Container -->
     <div class="page-content">
