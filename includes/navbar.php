@@ -9,7 +9,23 @@ $current_page = basename($_SERVER['PHP_SELF']);
 $current_dir  = basename(dirname($_SERVER['PHP_SELF'])); // 'admin', 'user', 'auth', etc.
 $is_admin = isAdmin();
 $is_user = isUser();
-$pending_review = $conn->query("SELECT COUNT(*) as count FROM complaints WHERE approval_status = 'pending_review'")->fetch_assoc()['count']; ?>
+$pending_review = $conn->query("SELECT COUNT(*) as count FROM complaints WHERE approval_status = 'pending_review'")->fetch_assoc()['count'];
+
+// Get current user's profile picture (for sidebar and navbar)
+$current_user_id = $_SESSION['user_id'];
+$stmt = $conn->prepare("SELECT profile_picture, avatar_url FROM users WHERE user_id = ?");
+$stmt->bind_param("i", $current_user_id);
+$stmt->execute();
+$current_user = $stmt->get_result()->fetch_assoc();
+
+// Priority: avatar_url (Cloudinary) → profile_picture (local) → initials
+$profile_img_url = '';
+if (!empty($current_user['avatar_url'])) {
+    $profile_img_url = $current_user['avatar_url'];
+} elseif (!empty($current_user['profile_picture'])) {
+    $profile_img_url = SITE_URL . $current_user['profile_picture'];
+}
+?>
 
 <!-- Sidebar Overlay (dark background kapag bukas ang sidebar sa mobile) -->
 <div class="sidebar-overlay" 
@@ -184,14 +200,14 @@ $pending_review = $conn->query("SELECT COUNT(*) as count FROM complaints WHERE a
     <!-- User Info in Sidebar (Mobile) -->
     <div class="sidebar-user-info d-md-none">
         <div class="d-flex align-items-center p-3" style="background: rgba(255,255,255,0.1); border-radius: 8px; margin: 15px;">
-              <?php if ($current_user['profile_picture'] && file_exists('../' . $current_user['profile_picture'])): ?>
-            <img src="<?php echo SITE_URL . $current_user['profile_picture']; ?>" 
-                 class="rounded-circle me-2" 
-                 width="42" 
-                 height="42" 
-                 style="object-fit: cover;"
-                 alt="Profile">
-        <?php else: ?>
+            <?php if ($profile_img_url): ?>
+                <img src="<?php echo htmlspecialchars($profile_img_url); ?>" 
+                     class="rounded-circle me-2" 
+                     width="42" 
+                     height="42" 
+                     style="object-fit: cover;"
+                     alt="Profile">
+            <?php else: ?>
             <div class="user-avatar me-2">
                 <?php echo strtoupper(substr($_SESSION['full_name'], 0, 1)); ?>
             </div>
@@ -315,20 +331,7 @@ $pending_review = $conn->query("SELECT COUNT(*) as count FROM complaints WHERE a
             
             <!-- User Profile - avatar visible on all screens, name/email hidden on mobile -->
             <?php
-            // Get current user's profile picture (supports both local and Cloudinary)
-            $current_user_id = $_SESSION['user_id'];
-            $stmt = $conn->prepare("SELECT profile_picture, avatar_url FROM users WHERE user_id = ?");
-            $stmt->bind_param("i", $current_user_id);
-            $stmt->execute();
-            $current_user = $stmt->get_result()->fetch_assoc();
-
-            // Priority: avatar_url (Cloudinary) → profile_picture (local) → initials
-            $profile_img_url = '';
-            if (!empty($current_user['avatar_url'])) {
-                $profile_img_url = $current_user['avatar_url'];
-            } elseif (!empty($current_user['profile_picture'])) {
-                $profile_img_url = SITE_URL . $current_user['profile_picture'];
-            }
+            // Note: $current_user is already defined at the top of navbar.php
             ?>
 
             <div class="dropdown user-profile-dropdown">
