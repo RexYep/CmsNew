@@ -220,11 +220,6 @@ if (!empty($current_user['avatar_url'])) {
     </div>
 </div>
 
-<!-- Mobile Toggle Button -->
-<button class="mobile-toggle" id="mobileToggle" aria-label="Toggle Sidebar">
-    <i class="bi bi-list"></i>
-</button>
-
 <!-- Main Content Wrapper -->
 <div class="main-content">
     <!-- Top Navbar -->
@@ -233,7 +228,6 @@ if (!empty($current_user['avatar_url'])) {
             <!-- Mobile hamburger button with direct inline code -->
             <button class="mobile-menu-btn d-md-none" 
                     id="mobileSidebarToggle" 
-                    onclick="document.getElementById('sidebar').classList.toggle('active'); document.getElementById('sidebarOverlay').classList.toggle('active'); document.body.style.overflow = document.getElementById('sidebar').classList.contains('active') ? 'hidden' : '';"
                     aria-label="Menu">
                 <i class="bi bi-list"></i>
             </button>

@@ -383,48 +383,6 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
-// Dark Mode Functionality
-const darkModeToggle = document.getElementById('darkModeToggle');
-const darkModeIcon = document.getElementById('darkModeIcon');
-const body = document.body;
-const html = document.documentElement;
-
-// Check for saved theme preference
-const currentTheme = localStorage.getItem('theme') || 'light';
-html.setAttribute('data-theme', currentTheme);
-
-if (currentTheme === 'dark') {
-    body.classList.add('dark-mode');
-    if (darkModeIcon) {
-        darkModeIcon.classList.remove('bi-moon-stars-fill');
-        darkModeIcon.classList.add('bi-sun-fill');
-    }
-}
-
-// Toggle dark mode
-if (darkModeToggle) {
-    darkModeToggle.addEventListener('click', function() {
-        const isDark = html.getAttribute('data-theme') === 'dark';
-        
-        if (isDark) {
-            html.setAttribute('data-theme', 'light');
-            body.classList.remove('dark-mode');
-            localStorage.setItem('theme', 'light');
-            if (darkModeIcon) {
-                darkModeIcon.classList.remove('bi-sun-fill');
-                darkModeIcon.classList.add('bi-moon-stars-fill');
-            }
-        } else {
-            html.setAttribute('data-theme', 'dark');
-            body.classList.add('dark-mode');
-            localStorage.setItem('theme', 'dark');
-            if (darkModeIcon) {
-                darkModeIcon.classList.remove('bi-moon-stars-fill');
-                darkModeIcon.classList.add('bi-sun-fill');
-            }
-        }
-    });
-}
 </script>
 
 <?php include '../includes/footer.php'; ?>

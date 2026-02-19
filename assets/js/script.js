@@ -49,7 +49,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // ============================================
 
   const sidebar = document.getElementById("sidebar");
-  const mobileToggle = document.getElementById("mobileToggle");
+
   const mobileSidebarToggle = document.getElementById("mobileSidebarToggle");
   const sidebarOverlay = document.getElementById("sidebarOverlay");
   const sidebarCloseBtn = document.getElementById("sidebarCloseBtn");
@@ -83,11 +83,6 @@ document.addEventListener("DOMContentLoaded", function () {
     } catch (error) {
       console.error("Sidebar toggle error:", error);
     }
-  }
-
-  // Mobile toggle button (bottom right floating)
-  if (mobileToggle) {
-    mobileToggle.addEventListener("click", toggleSidebar);
   }
 
   // Navbar hamburger button
@@ -582,8 +577,8 @@ function exportTableToCSV(tableId, filename = "export.csv") {
 // ============================================
 
 // Add CSS for back to top button
-const style = document.createElement("style");
-style.innerHTML = `
+const backToTopStyle = document.createElement("style");
+backToTopStyle.innerHTML = `
     .back-to-top {
         position: fixed;
         bottom: 80px;
@@ -616,4 +611,5 @@ style.innerHTML = `
         font-size: 1.2rem;
     }
 `;
-document.head.appendChild(style);
+
+document.head.appendChild(backToTopStyle);
