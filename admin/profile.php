@@ -40,8 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_picture'])) {
                 $avatar_url = $upload_result['url'];
                 $avatar_public_id = $upload_result['public_id'];
 
-                $stmt = $conn->prepare("UPDATE users SET profile_picture = ?, avatar_url = ?, avatar_public_id = ? WHERE user_id = ?");
-                $stmt->bind_param("sssi", $avatar_url, $avatar_url, $avatar_public_id, $user_id);
+                $stmt = $conn->prepare("UPDATE users SET profile_picture = NULL, avatar_url = ?, avatar_public_id = ? WHERE user_id = ?");
+                $stmt->bind_param("ssi", $avatar_url, $avatar_public_id, $user_id);
 
                 if ($stmt->execute()) {
                     $success = 'Profile picture updated successfully!';
