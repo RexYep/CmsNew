@@ -147,7 +147,7 @@ window.addEventListener('beforeunload', function() {
 
 // Add CSS animation for pulse effect
 const pulseStyle = document.createElement('style');
-pulseStylestyle.textContent = `
+pulseStyle.textContent = `
     @keyframes pulse {
         0%, 100% {
             opacity: 1;
