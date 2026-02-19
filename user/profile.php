@@ -63,7 +63,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_picture'])) {
                     $error = 'Database error: ' . $stmt->error;
                 }
             } else {
+                
                 $error = 'Upload failed: ' . $upload_result['error'];
+                error_log("DEBUG: APP_ENV=" . getenv('APP_ENV'));
+                error_log("DEBUG: CLOUD_NAME=" . CLOUDINARY_CLOUD_NAME);
             }
         }
     } else {

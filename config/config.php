@@ -8,7 +8,7 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
- use Cloudinary\Configuration\Configuration;
+use Cloudinary\Configuration\Configuration;
 // LOAD .env FILE (LOCAL DEVELOPMENT ONLY)
 
 $env_file = dirname(__DIR__) . '/.env';
@@ -84,8 +84,6 @@ if (file_exists(BASE_PATH . 'vendor/autoload.php')) {
     require_once BASE_PATH . 'vendor/autoload.php';
 
     if (CLOUDINARY_CLOUD_NAME && CLOUDINARY_API_KEY && CLOUDINARY_API_SECRET) {
-       
-
         Configuration::instance([
             'cloud' => [
                 'cloud_name' => CLOUDINARY_CLOUD_NAME,
