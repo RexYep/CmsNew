@@ -79,8 +79,8 @@ setupDropdownTrigger() {
         document.body.appendChild(indicator);
         
         // Add animations
-        const style = document.createElement('style');
-        style.textContent = `
+        const styles = document.createElement('style');
+        styles.textContent = `
             @keyframes spin {
                 from { transform: rotate(0deg); }
                 to { transform: rotate(360deg); }
@@ -94,7 +94,7 @@ setupDropdownTrigger() {
                 50% { transform: scale(1.05); }
             }
         `;
-        document.head.appendChild(style);
+        document.head.appendChild(styles);
     },
     
     // Show/hide indicator
