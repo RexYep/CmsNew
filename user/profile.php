@@ -64,9 +64,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_picture'])) {
                 }
             } else {
                 
-                $error = 'Upload failed: ' . $upload_result['error'];
-                error_log("DEBUG: APP_ENV=" . getenv('APP_ENV'));
-                error_log("DEBUG: CLOUD_NAME=" . CLOUDINARY_CLOUD_NAME);
+                $error = 'Upload failed: ' . $upload_result['error']
+           . ' | APP_ENV: ' . getenv('APP_ENV')
+           . ' | Cloud: ' . CLOUDINARY_CLOUD_NAME;
+    
+    // Ito ang lalabas sa Render logs:
+                error_log("UPLOAD DEBUG: " . $error);
             }
         }
     } else {
