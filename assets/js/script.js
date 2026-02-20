@@ -403,6 +403,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const allForms = document.querySelectorAll("form");
   allForms.forEach(function (form) {
+    if (form.querySelector('input[type="file"]')) return;
+
     form.addEventListener("submit", function () {
       const submitBtn = this.querySelector('button[type="submit"]');
       if (submitBtn) {
