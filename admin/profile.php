@@ -333,9 +333,10 @@ include '../includes/navbar.php';
                                      class="rounded-circle" width="150" height="150"
                                      style="object-fit: cover;" id="currentImage">
                             <?php else: ?>
-                                <div class="user-avatar mx-auto" style="width: 150px; height: 150px; font-size: 4rem;">
-                                    <?php echo strtoupper(substr($user['full_name'], 0, 1)); ?>
-                                </div>
+                              <!-- BAGO -->
+                            <div class="user-avatar" style="width: 36px; height: 36px; font-size: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                <?php echo strtoupper(substr($_SESSION['full_name'], 0, 1)); ?>
+                            </div>
                             <?php endif; ?>
                         </div>
                     </div>

@@ -3,13 +3,11 @@
 // USER PROFILE PAGE
 // user/profile.php
 // ============================================
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+
 require_once '../config/config.php';
 require_once '../includes/functions.php';
 require_once '../includes/cloudinary_helper.php';
-ini_set('log_errors', 1);
-ini_set('error_log', 'php://stderr');
+
 
 requireLogin();
 
@@ -49,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_picture'])) {
             error_log("ERROR: File too large");
         } 
         else {
-            error_log("Attempting Cloudinary upload...");
+            error_log("Attempting  upload...");
             $upload_result = uploadToCloudinary($_FILES['profile_picture'], 'avatars');
             error_log("Upload result: " . print_r($upload_result, true));
             
@@ -400,9 +398,10 @@ include '../includes/navbar.php';
                                      style="object-fit: cover;"
                                      id="currentImage">
                             <?php else: ?>
-                                <div class="user-avatar mx-auto" style="width: 150px; height: 150px; font-size: 4rem;">
-                                    <?php echo strtoupper(substr($user['full_name'], 0, 1)); ?>
-                                </div>
+                                <!-- BAGO -->
+                        <div class="user-avatar" style="width: 36px; height: 36px; font-size: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <?php echo strtoupper(substr($_SESSION['full_name'], 0, 1)); ?>
+                        </div>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -417,8 +416,7 @@ include '../includes/navbar.php';
                                id="profilePictureInput"
                                required>
                         <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> JPG, PNG, GIF - Max 2MB - Will be uploaded to Cloudinary
-                        </small>
+                            <i class="bi bi-info-circle"></i> JPG, PNG, GIF - Max 2MB
                     </div>
 
                     <!-- Preview -->
@@ -433,7 +431,7 @@ include '../includes/navbar.php';
                     <?php if ($has_avatar): ?>
                         <a href="?delete_picture=1" 
                            class="btn btn-danger me-auto"
-                           onclick="return confirm('Delete profile picture from Cloudinary?');">
+                           onclick="return confirm('Delete profile picture?');">
                             <i class="bi bi-trash"></i> Delete
                         </a>
                     <?php endif; ?>
