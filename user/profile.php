@@ -8,6 +8,8 @@ ini_set('display_errors', 1);
 require_once '../config/config.php';
 require_once '../includes/functions.php';
 require_once '../includes/cloudinary_helper.php';
+ini_set('log_errors', 1);
+ini_set('error_log', 'php://stderr');
 
 requireLogin();
 
