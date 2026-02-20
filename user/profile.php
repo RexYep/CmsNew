@@ -27,53 +27,56 @@ $user = getUserById($user_id);
 
 // Handle profile picture upload with CLOUDINARY
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_picture'])) {
+    error_log("=== UPLOAD ATTEMPT STARTED ===");
+    error_log("FILES: " . print_r($_FILES, true));
+    error_log("APP_ENV: " . getenv('APP_ENV'));
+    error_log("CLOUD_NAME: " . CLOUDINARY_CLOUD_NAME);
+    error_log("API_KEY: " . (CLOUDINARY_API_KEY ? 'SET' : 'EMPTY'));
+    error_log("API_SECRET: " . (CLOUDINARY_API_SECRET ? 'SET' : 'EMPTY'));
+    
     if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === 0) {
+        error_log("File received: " . $_FILES['profile_picture']['name']);
         
-        // Validate file type
         $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
         if (!in_array($_FILES['profile_picture']['type'], $allowed_types)) {
             $error = 'Only JPG, PNG, and GIF images are allowed';
+            error_log("ERROR: Invalid file type - " . $_FILES['profile_picture']['type']);
         } 
-        // Validate file size (max 2MB for avatars)
         elseif ($_FILES['profile_picture']['size'] > 2 * 1024 * 1024) {
             $error = 'Avatar size must not exceed 2MB';
+            error_log("ERROR: File too large");
         } 
         else {
-            // Delete old avatar from Cloudinary if exists
-            if (!empty($user['avatar_public_id'])) {
-                deleteFromCloudinary($user['avatar_public_id'], 'image');
-            }
-            
-            // Upload new avatar to Cloudinary
+            error_log("Attempting Cloudinary upload...");
             $upload_result = uploadToCloudinary($_FILES['profile_picture'], 'avatars');
+            error_log("Upload result: " . print_r($upload_result, true));
             
             if ($upload_result['success']) {
                 $avatar_url = $upload_result['url'];
                 $avatar_public_id = $upload_result['public_id'];
+                error_log("Upload SUCCESS. URL: " . $avatar_url);
                 
-                // Update database
-              $stmt = $conn->prepare("UPDATE users SET profile_picture = NULL, avatar_url = ?, avatar_public_id = ? WHERE user_id = ?");
-              $stmt->bind_param("ssi", $avatar_url, $avatar_public_id, $user_id);
+                $stmt = $conn->prepare("UPDATE users SET profile_picture = NULL, avatar_url = ?, avatar_public_id = ? WHERE user_id = ?");
+                $stmt->bind_param("ssi", $avatar_url, $avatar_public_id, $user_id);
                 
                 if ($stmt->execute()) {
                     $success = 'Profile picture updated successfully!';
-                    $_SESSION['avatar_url'] = $avatar_url; // Update session
-                    $user = getUserById($user_id); // Refresh user data
+                    error_log("DB UPDATE SUCCESS");
+                    $_SESSION['avatar_url'] = $avatar_url;
+                    $user = getUserById($user_id);
                 } else {
                     $error = 'Database error: ' . $stmt->error;
+                    error_log("DB ERROR: " . $stmt->error);
                 }
             } else {
-                
-                $error = 'Upload failed: ' . $upload_result['error']
-           . ' | APP_ENV: ' . getenv('APP_ENV')
-           . ' | Cloud: ' . CLOUDINARY_CLOUD_NAME;
-    
-    // Ito ang lalabas sa Render logs:
-                error_log("UPLOAD DEBUG: " . $error);
+                $error = 'Upload failed: ' . $upload_result['error'];
+                error_log("CLOUDINARY FAILED: " . $upload_result['error']);
             }
         }
     } else {
+        $file_error = isset($_FILES['profile_picture']) ? $_FILES['profile_picture']['error'] : 'NO FILE';
         $error = 'Please select a file to upload';
+        error_log("FILE ERROR CODE: " . $file_error);
     }
 }
 
