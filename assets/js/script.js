@@ -415,7 +415,7 @@ document.addEventListener("DOMContentLoaded", function () {
           submitBtn.disabled = false;
           submitBtn.innerHTML =
             submitBtn.getAttribute("data-original-text") || "Submit";
-        }, 3000);
+        }, 30000);
       }
     });
   });
