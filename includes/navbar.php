@@ -336,9 +336,17 @@ if (!empty($current_user['avatar_url'])) {
                              style="object-fit: cover;"
                              alt="Profile">
                     <?php else: ?>
-                        <div class="user-avatar" style="width: 36px; height: 36px; font-size: 1rem;">
-                            <?php echo strtoupper(substr($_SESSION['full_name'], 0, 1)); ?>
-                        </div>
+                                <div class="user-avatar" 
+                style="width: 36px; height: 36px; font-size: 1rem; 
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        font-weight: 700;">
+                <?php echo strtoupper(substr($_SESSION['full_name'], 0, 1)); ?>
+                </div>
                     <?php endif; ?>
                     
                     <!-- User name/email - hidden on mobile -->
