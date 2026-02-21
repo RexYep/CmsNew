@@ -12,7 +12,7 @@ if (isset($_SESSION['user_id'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Barangay San Juan — Online Complaint Portal</title>
+    <title>Barangay San Cristobal — Online Complaint Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
@@ -34,7 +34,8 @@ if (isset($_SESSION['user_id'])) {
         .navbar-custom{position:fixed;top:0;left:0;right:0;z-index:1000;padding:16px 0;transition:all .4s ease;}
         .navbar-custom.scrolled{background:rgba(13,27,42,.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:12px 0;box-shadow:0 4px 30px rgba(0,0,0,.3);}
         .nav-brand{font-family:'Sora',sans-serif;font-weight:800;color:var(--white);text-decoration:none;display:flex;align-items:center;gap:10px;}
-        .nav-logo-wrap{width:38px;height:38px;background:linear-gradient(135deg,var(--cyan),var(--cyan-2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;color:var(--navy);}
+        .nav-logo-wrap{width:38px;height:38px;background:transparent;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;color:var(--navy);overflow:hidden;}
+        .nav-logo{width:100%;height:100%;object-fit:contain;border-radius:inherit;display:block;}
         .nav-brand-text{line-height:1.1;}
         .nav-brand-top{font-size:.65rem;font-weight:400;color:var(--muted);letter-spacing:.5px;display:block;}
         .nav-brand-name{font-size:.95rem;font-weight:800;color:var(--white);}
@@ -63,7 +64,8 @@ if (isset($_SESSION['user_id'])) {
         @keyframes drift{0%,100%{transform:translate(0,0);}33%{transform:translate(20px,-15px);}66%{transform:translate(-15px,20px);}}
 
         .hero-seal{display:flex;align-items:center;gap:14px;margin-bottom:28px;animation:fadeUp .6s ease both;}
-        .seal-icon{width:54px;height:54px;background:linear-gradient(135deg,var(--cyan),var(--cyan-2));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:var(--navy);box-shadow:0 0 0 4px rgba(0,194,224,.15),0 0 0 8px rgba(0,194,224,.05);flex-shrink:0;}
+        .seal-icon{width:54px;height:54px;background:transparent;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:var(--navy);box-shadow:0 0 0 4px rgba(0,194,224,.15),0 0 0 8px rgba(0,194,224,.05);flex-shrink:0;overflow:hidden;}
+        .seal-icon img{width:100%;height:100%;object-fit:contain;border-radius:50%;}
         .seal-text{line-height:1.3;}
         .seal-office{font-size:.7rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);display:block;margin-bottom:3px;}
         .seal-name{font-family:'Sora',sans-serif;font-weight:800;font-size:1.1rem;color:var(--white);}
@@ -91,7 +93,8 @@ if (isset($_SESSION['user_id'])) {
         .portal-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:24px;box-shadow:0 30px 80px rgba(0,0,0,.5);position:relative;overflow:hidden;}
         .portal-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--cyan),var(--gold),var(--cyan));}
         .portal-header{display:flex;align-items:center;gap:10px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);}
-        .portal-seal{width:36px;height:36px;background:linear-gradient(135deg,var(--cyan),var(--cyan-2));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;color:var(--navy);}
+        .portal-seal{width:36px;height:36px;background:transparent;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;color:var(--navy);overflow:hidden;}
+        .portal-seal img{width:100%;height:100%;object-fit:contain;}
         .portal-title-text{line-height:1.2;}
         .portal-title-main{font-family:'Sora',sans-serif;font-weight:700;font-size:.82rem;color:var(--white);}
         .portal-title-sub{font-size:.68rem;color:var(--muted);}
@@ -173,7 +176,8 @@ if (isset($_SESSION['user_id'])) {
         /* FOOTER */
         .footer{background:#060f1a;border-top:1px solid var(--border);padding:60px 0 30px;}
         .footer-brand{display:flex;align-items:center;gap:10px;margin-bottom:14px;text-decoration:none;}
-        .footer-seal{width:36px;height:36px;background:linear-gradient(135deg,var(--cyan),var(--cyan-2));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.95rem;color:var(--navy);}
+        .footer-seal{width:36px;height:36px;background:transparent;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.95rem;color:var(--navy);overflow:hidden;}
+        .footer-seal img{width:100%;height:100%;object-fit:contain;}
         .footer-brand-text{line-height:1.2;}
         .footer-brand-top{font-size:.62rem;color:var(--muted);letter-spacing:.5px;display:block;}
         .footer-brand-name{font-family:'Sora',sans-serif;font-weight:800;font-size:.95rem;color:#fff;}
@@ -206,10 +210,10 @@ if (isset($_SESSION['user_id'])) {
 <nav class="navbar-custom" id="navbar">
     <div class="container d-flex align-items-center justify-content-between">
         <a href="#" class="nav-brand">
-            <div class="nav-logo-wrap"><i class="bi bi-buildings-fill"></i></div>
+            <div class="nav-logo-wrap"><img src="brgy-logo.jpg" alt="Barangay Logo" class="nav-logo"></div>
             <div class="nav-brand-text">
                 <span class="nav-brand-top">Official Portal</span>
-                <span class="nav-brand-name">Barangay San Juan<span>.</span></span>
+                <span class="nav-brand-name">Barangay San Cristobal<span>.</span></span>
             </div>
         </a>
         <button class="nav-toggler" id="navToggler"><i class="bi bi-list"></i></button>
@@ -228,7 +232,7 @@ if (isset($_SESSION['user_id'])) {
     <div class="container">
         <div class="ann-inner">
             <span class="ann-label">Official Notice</span>
-            <p class="ann-text"><strong>Barangay San Juan</strong> is now accepting online complaints through this portal. All submissions are reviewed by authorized barangay officials.</p>
+            <p class="ann-text"><strong>Barangay San Cristobal</strong> is now accepting online complaints through this portal. All submissions are reviewed by authorized barangay officials.</p>
         </div>
     </div>
 </div>
@@ -242,17 +246,17 @@ if (isset($_SESSION['user_id'])) {
         <div class="row align-items-center">
             <div class="col-lg-6">
                 <div class="hero-seal">
-                    <div class="seal-icon"><i class="bi bi-buildings-fill"></i></div>
+                    <div class="seal-icon"><img src="brgy-logo.jpg" alt="Barangay Logo" class="nav-logo"></div>
                     <div class="seal-text">
                         <span class="seal-office">Official Online Portal</span>
-                        <span class="seal-name">Barangay San Juan</span>
+                        <span class="seal-name">Barangay San Cristobal</span>
                     </div>
                 </div>
                 <h1 class="hero-title">
                     <span class="line-muted">Your voice matters to us.</span>
                     We Are Here to<br><span class="accent">Serve &amp; Listen.</span>
                 </h1>
-                <p class="hero-message">"To all residents of Barangay San Juan — this portal is your direct line to your barangay officials. File your complaints, concerns, and requests online. We are committed to addressing every voice in our community."</p>
+                <p class="hero-message">"To all residents of Barangay San Cristobal — this portal is your direct line to your barangay officials. File your complaints, concerns, and requests online. We are committed to addressing every voice in our community."</p>
                 <div class="hero-cta">
                     <a href="auth/register.php" class="btn-primary-cta"><i class="bi bi-person-plus-fill"></i> Register as Resident</a>
                     <a href="auth/login.php" class="btn-secondary-cta"><i class="bi bi-box-arrow-in-right"></i> Login to Portal</a>
@@ -266,9 +270,9 @@ if (isset($_SESSION['user_id'])) {
                 <div style="position:relative;padding:20px;">
                     <div class="portal-card">
                         <div class="portal-header">
-                            <div class="portal-seal"><i class="bi bi-buildings-fill"></i></div>
+                            <div class="portal-seal"><img src="brgy-logo.jpg" alt="Barangay Logo"></div>
                             <div class="portal-title-text">
-                                <div class="portal-title-main">Barangay San Juan — Complaint Portal</div>
+                                <div class="portal-title-main">Barangay San Cristobal — Complaint Portal</div>
                                 <div class="portal-title-sub">Official Resident Dashboard</div>
                             </div>
                         </div>
@@ -311,7 +315,7 @@ if (isset($_SESSION['user_id'])) {
         <div class="text-center mb-5">
             <span class="section-eyebrow reveal">What We Offer</span>
             <h2 class="section-title reveal">Services Available<br>Through This Portal</h2>
-            <p class="section-sub reveal">Barangay San Juan is committed to providing accessible and responsive services to all residents through this online system.</p>
+            <p class="section-sub reveal">Barangay San Cristobal is committed to providing accessible and responsive services to all residents through this online system.</p>
         </div>
         <div class="row g-4">
             <?php
@@ -343,7 +347,7 @@ if (isset($_SESSION['user_id'])) {
             <div class="col-lg-5">
                 <span class="section-eyebrow reveal">Step-by-Step</span>
                 <h2 class="section-title reveal">How to File a Complaint Online</h2>
-                <p class="section-sub text-start reveal">Filing a complaint is simple. Follow these steps and your concern will be received by the Barangay San Juan Administration immediately.</p>
+                <p class="section-sub text-start reveal">Filing a complaint is simple. Follow these steps and your concern will be received by the Barangay San Cristobal Administration immediately.</p>
                 <div class="mt-4 reveal" style="transition-delay:.3s">
                     <a href="auth/register.php" class="btn-primary-cta d-inline-flex"><i class="bi bi-person-plus-fill"></i> Start Here — Register Now</a>
                 </div>
@@ -379,15 +383,15 @@ if (isset($_SESSION['user_id'])) {
         <div class="text-center mb-5">
             <span class="section-eyebrow reveal">Know Your Rights</span>
             <h2 class="section-title reveal">Every Resident Has the Right<br>to Be Heard</h2>
-            <p class="section-sub reveal">Barangay San Juan upholds the rights of every resident. This portal is a tool to make those rights accessible to everyone.</p>
+            <p class="section-sub reveal">Barangay San Cristobal upholds the rights of every resident. This portal is a tool to make those rights accessible to everyone.</p>
         </div>
         <div class="row g-4">
             <?php
             $rights = [
-                ['bi-megaphone-fill','rgba(0,194,224,.1)','#00c2e0','Right to File a Complaint','Every resident of Barangay San Juan has the right to formally file a complaint or concern with the barangay for proper action and resolution.'],
+                ['bi-megaphone-fill','rgba(0,194,224,.1)','#00c2e0','Right to File a Complaint','Every resident of Barangay San Cristobal has the right to formally file a complaint or concern with the barangay for proper action and resolution.'],
                 ['bi-eye-fill','rgba(0,194,224,.1)','#00c2e0','Right to Be Informed','You have the right to receive updates and be informed of the status, actions taken, and outcome of your filed complaint.'],
                 ['bi-person-fill-check','rgba(39,201,63,.1)','#27c93f','Right to Privacy','Your personal information and complaint details are kept confidential and accessible only to authorized barangay personnel.'],
-                ['bi-shield-check-fill','rgba(0,194,224,.1)','#00c2e0','Right to Fair Treatment','All complaints are treated equally and fairly. Every concern receives proper attention and due process regardless of who filed it.'],
+                ['bi-shield-fill','rgba(0,194,224,.1)','#00c2e0','Right to Fair Treatment','All complaints are treated equally and fairly. Every concern receives proper attention and due process regardless of who filed it.'],
                 ['bi-clock-history','rgba(255,193,7,.1)','#ffc107','Right to Timely Resolution','The Barangay Administration is committed to addressing complaints within a reasonable timeframe and keeping you informed of progress.'],
                 ['bi-chat-left-text-fill','rgba(0,194,224,.1)','#00c2e0','Right to Give Feedback','After your complaint is resolved, you have the right to provide feedback and rate the quality of the barangay\'s response and resolution.'],
             ];
@@ -408,9 +412,9 @@ if (isset($_SESSION['user_id'])) {
 <section class="cta-section">
     <div class="cta-glow"></div>
     <div class="container cta-inner">
-        <div class="cta-tag reveal"><i class="bi bi-buildings-fill"></i> Barangay San Juan</div>
+        <div class="cta-tag reveal"><i class="bi bi-buildings-fill"></i> Barangay San Cristobal</div>
         <h2 class="cta-title reveal">Your Concern Deserves<br><span>Official Attention.</span></h2>
-        <p class="cta-sub reveal">Register as a resident of Barangay San Juan today and gain access to your community's official online complaint portal. Your barangay is here to serve you.</p>
+        <p class="cta-sub reveal">Register as a resident of Barangay San Cristobal today and gain access to your community's official online complaint portal. Your barangay is here to serve you.</p>
         <div class="d-flex gap-3 justify-content-center flex-wrap reveal">
             <a href="auth/register.php" class="btn-primary-cta"><i class="bi bi-person-plus-fill"></i> Register as Resident</a>
             <a href="auth/login.php" class="btn-secondary-cta"><i class="bi bi-box-arrow-in-right"></i> Already Registered? Login</a>
@@ -424,13 +428,13 @@ if (isset($_SESSION['user_id'])) {
         <div class="row g-4">
             <div class="col-lg-4">
                 <a href="#" class="footer-brand">
-                    <div class="footer-seal"><i class="bi bi-buildings-fill"></i></div>
+                    <div class="footer-seal"><img src="brgy-logo.jpg" alt="Barangay Logo"></div>
                     <div class="footer-brand-text">
                         <span class="footer-brand-top">Official Online Portal</span>
-                        <span class="footer-brand-name">Barangay San Juan<span>.</span></span>
+                        <span class="footer-brand-name">Barangay San Cristobal<span>.</span></span>
                     </div>
                 </a>
-                <p class="footer-desc">An official digital service of Barangay San Juan for receiving and managing resident complaints and concerns.</p>
+                <p class="footer-desc">An official digital service of Barangay San Cristobal for receiving and managing resident complaints and concerns.</p>
             </div>
             <div class="col-lg-2 col-md-4 col-6">
                 <p class="footer-heading">Portal</p>
@@ -458,7 +462,7 @@ if (isset($_SESSION['user_id'])) {
         </div>
         <hr class="footer-hr">
         <div class="footer-bottom">
-            <span>&copy; <?=date('Y')?> Barangay San Juan — Official Online Complaint Portal. All rights reserved.</span>
+            <span>&copy; <?=date('Y')?> Barangay San Cristobal — Official Online Complaint Portal. All rights reserved.</span>
             <div class="footer-bottom-links">
                 <a href="auth/privacy.php" target="_blank">Privacy</a>
                 <a href="auth/terms.php" target="_blank">Terms</a>

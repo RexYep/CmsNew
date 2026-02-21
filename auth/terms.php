@@ -572,18 +572,7 @@
         </p>
     </div>
 
-    <!-- Sticky agree bar -->
-    <div class="agree-bar">
-        <div class="agree-inner">
-            <span class="agree-text">
-                <i class="bi bi-check-circle-fill" style="color:var(--cyan);"></i>
-                &nbsp;I have read and understood the Terms and Conditions.
-            </span>
-            <a href="javascript:window.close()" class="btn-agree" onclick="window.close(); return false;">
-                <i class="bi bi-x-lg"></i> Close & Go Back
-            </a>
-        </div>
-    </div>
+   
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>

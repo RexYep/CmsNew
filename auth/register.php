@@ -450,7 +450,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="terms-row">
                 <input class="form-check-input" type="checkbox" id="terms" required>
                 <label class="terms-label" for="terms">
-                    I agree to the <a href="#">Terms and Conditions</a> and <a href="#">Privacy Policy</a>
+                    I agree to the <a href="terms.php" target="_blank">Terms and Conditions</a> and <a href="privacy.php" target="_blank">Privacy Policy</a>
                 </label>
             </div>
 
