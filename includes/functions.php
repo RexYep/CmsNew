@@ -221,8 +221,7 @@ function logoutUser()
 function getUserById($user_id)
 {
     global $conn;
-
-    $stmt = $conn->prepare("SELECT user_id, full_name, email, phone, role, status, profile_picture, created_at FROM users WHERE user_id = ?");
+    $stmt = $conn->prepare("SELECT user_id, full_name, email, phone, role, status, profile_picture, avatar_url, avatar_public_id, created_at FROM users WHERE user_id = ?");
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
     $result = $stmt->get_result();

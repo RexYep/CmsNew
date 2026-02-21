@@ -347,7 +347,7 @@ include '../includes/navbar.php';
                                accept="image/jpeg,image/png,image/jpg,image/gif"
                                id="profilePictureInput" required>
                         <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> JPG, PNG, GIF - Max 2MB - Uploaded to Cloudinary
+                            <i class="bi bi-info-circle"></i> JPG, PNG, GIF - Max 2MB 
                         </small>
                     </div>
 
