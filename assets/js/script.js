@@ -19,7 +19,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Update icon based on current theme
   function updateIcon(theme) {
-    if (!darkModeIcon) return; // Safeguard when icon isn't present on the page
+    if (!darkModeIcon) return;
     if (theme === "dark") {
       darkModeIcon.classList.remove("bi-moon-stars-fill");
       darkModeIcon.classList.add("bi-sun-fill");
@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // Set initial icon (only if element exists)
+  // Set initial icon
   if (darkModeIcon) updateIcon(currentTheme);
 
   // Toggle dark mode
@@ -37,7 +37,6 @@ document.addEventListener("DOMContentLoaded", function () {
     darkModeToggle.addEventListener("click", function () {
       const currentTheme = htmlElement.getAttribute("data-theme");
       const newTheme = currentTheme === "dark" ? "light" : "dark";
-
       htmlElement.setAttribute("data-theme", newTheme);
       localStorage.setItem("theme", newTheme);
       updateIcon(newTheme);
@@ -49,26 +48,22 @@ document.addEventListener("DOMContentLoaded", function () {
   // ============================================
 
   const sidebar = document.getElementById("sidebar");
-
   const mobileSidebarToggle = document.getElementById("mobileSidebarToggle");
   const sidebarOverlay = document.getElementById("sidebarOverlay");
   const sidebarCloseBtn = document.getElementById("sidebarCloseBtn");
 
-  // Open sidebar
   function openSidebar() {
     if (sidebar) sidebar.classList.add("active");
     if (sidebarOverlay) sidebarOverlay.classList.add("active");
-    document.body.style.overflow = "hidden"; // Prevent background scroll
+    document.body.style.overflow = "hidden";
   }
 
-  // Close sidebar
   function closeSidebar() {
     if (sidebar) sidebar.classList.remove("active");
     if (sidebarOverlay) sidebarOverlay.classList.remove("active");
-    document.body.style.overflow = ""; // Restore scroll
+    document.body.style.overflow = "";
   }
 
-  // Toggle sidebar
   function toggleSidebar(e) {
     try {
       if (e) {
@@ -116,11 +111,11 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // Close sidebar on window resize (if desktop)
+  // Close sidebar on window resize to desktop
   window.addEventListener("resize", function () {
     if (window.innerWidth > 768) {
       closeSidebar();
-      document.body.style.overflow = ""; // Always restore on desktop
+      document.body.style.overflow = "";
     }
   });
 
@@ -218,8 +213,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (href !== "#" && href !== "" && document.querySelector(href)) {
         e.preventDefault();
         const target = document.querySelector(href);
-        const offsetTop = target.offsetTop - 80; // Account for fixed header
-
+        const offsetTop = target.offsetTop - 80;
         window.scrollTo({
           top: offsetTop,
           behavior: "smooth",
@@ -236,7 +230,6 @@ document.addEventListener("DOMContentLoaded", function () {
   clickableRows.forEach(function (row) {
     row.style.cursor = "pointer";
     row.addEventListener("click", function (e) {
-      // Don't trigger if clicking on a button or link
       if (
         e.target.tagName !== "BUTTON" &&
         e.target.tagName !== "A" &&
@@ -253,10 +246,9 @@ document.addEventListener("DOMContentLoaded", function () {
   // ============================================
 
   const searchInputs = document.querySelectorAll(
-    'input[type="search"], input.search-input',
+    'input[type="search"], input[name="search"]',
   );
   searchInputs.forEach(function (input) {
-    // Add clear button functionality
     input.addEventListener("input", function () {
       if (this.value.length > 0) {
         this.style.paddingRight = "35px";
@@ -267,7 +259,7 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   // ============================================
-  // DATA TABLE INITIALIZATION (if using DataTables plugin)
+  // DATA TABLE INITIALIZATION
   // ============================================
 
   try {
@@ -305,11 +297,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (counterId) {
       const counter = document.getElementById(counterId);
-
       textarea.addEventListener("input", function () {
         const currentLength = this.value.length;
         counter.textContent = currentLength + " / " + maxLength;
-
         if (currentLength > maxLength * 0.9) {
           counter.classList.add("text-danger");
           counter.classList.remove("text-success");
@@ -342,26 +332,18 @@ document.addEventListener("DOMContentLoaded", function () {
   copyButtons.forEach(function (button) {
     button.addEventListener("click", function () {
       const textToCopy = this.getAttribute("data-copy");
-
-      // Create temporary textarea
       const tempTextarea = document.createElement("textarea");
       tempTextarea.value = textToCopy;
       tempTextarea.style.position = "fixed";
       tempTextarea.style.opacity = "0";
       document.body.appendChild(tempTextarea);
-
-      // Select and copy
       tempTextarea.select();
       document.execCommand("copy");
-
-      // Remove temporary textarea
       document.body.removeChild(tempTextarea);
 
-      // Show feedback
       const originalText = this.innerHTML;
       this.innerHTML = '<i class="bi bi-check"></i> Copied!';
       this.classList.add("btn-success");
-
       setTimeout(() => {
         this.innerHTML = originalText;
         this.classList.remove("btn-success");
@@ -373,14 +355,12 @@ document.addEventListener("DOMContentLoaded", function () {
   // BACK TO TOP BUTTON
   // ============================================
 
-  // Create back to top button
   const backToTopBtn = document.createElement("button");
   backToTopBtn.innerHTML = '<i class="bi bi-arrow-up"></i>';
   backToTopBtn.className = "back-to-top";
   backToTopBtn.setAttribute("aria-label", "Back to top");
   document.body.appendChild(backToTopBtn);
 
-  // Show/hide back to top button
   window.addEventListener("scroll", function () {
     if (window.pageYOffset > 300) {
       backToTopBtn.classList.add("show");
@@ -389,7 +369,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // Scroll to top on click
   backToTopBtn.addEventListener("click", function () {
     window.scrollTo({
       top: 0,
@@ -399,20 +378,35 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // ============================================
   // PREVENT DOUBLE FORM SUBMISSION
+  // FIX: Skip file upload forms + preserve button name in POST
   // ============================================
 
   const allForms = document.querySelectorAll("form");
   allForms.forEach(function (form) {
+    // Skip forms na may file input para hindi masira ang upload
     if (form.querySelector('input[type="file"]')) return;
 
     form.addEventListener("submit", function () {
       const submitBtn = this.querySelector('button[type="submit"]');
       if (submitBtn) {
+        // I-save ang button name/value bilang hidden input
+        // para hindi mawala sa POST data kahit ma-disable ang button
+        const btnName = submitBtn.getAttribute("name");
+        const btnValue = submitBtn.value || "";
+
+        if (btnName) {
+          const hiddenInput = document.createElement("input");
+          hiddenInput.type = "hidden";
+          hiddenInput.name = btnName;
+          hiddenInput.value = btnValue;
+          this.appendChild(hiddenInput);
+        }
+
         submitBtn.disabled = true;
         submitBtn.innerHTML =
           '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
 
-        // Re-enable after 3 seconds in case of errors
+        // 30 seconds timeout para sa mabagal na connections (Render free tier)
         setTimeout(function () {
           submitBtn.disabled = false;
           submitBtn.innerHTML =
@@ -427,22 +421,20 @@ document.addEventListener("DOMContentLoaded", function () {
 // UTILITY FUNCTIONS (Global)
 // ============================================
 
-// Show loading spinner
 function showLoading(elementId) {
   const element = document.getElementById(elementId);
   if (element) {
     element.innerHTML = `
-            <div class="text-center py-5">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-                <p class="mt-3 text-muted">Loading...</p>
-            </div>
-        `;
+      <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-3 text-muted">Loading...</p>
+      </div>
+    `;
   }
 }
 
-// Hide loading spinner
 function hideLoading(elementId) {
   const element = document.getElementById(elementId);
   if (element) {
@@ -453,20 +445,16 @@ function hideLoading(elementId) {
   }
 }
 
-// Show toast notification
 function showToast(message, type = "info", duration = 3000) {
   const toastHTML = `
-        <div class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body">
-                    ${message}
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div>
-        </div>
-    `;
+    <div class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body">${message}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+      </div>
+    </div>
+  `;
 
-  // Create toast container if it doesn't exist
   let toastContainer = document.getElementById("toastContainer");
   if (!toastContainer) {
     toastContainer = document.createElement("div");
@@ -477,7 +465,6 @@ function showToast(message, type = "info", duration = 3000) {
     document.body.appendChild(toastContainer);
   }
 
-  // Add toast
   toastContainer.insertAdjacentHTML("beforeend", toastHTML);
   const toastElement = toastContainer.lastElementChild;
   const toast = new bootstrap.Toast(toastElement, {
@@ -486,13 +473,11 @@ function showToast(message, type = "info", duration = 3000) {
   });
   toast.show();
 
-  // Remove toast element after it's hidden
   toastElement.addEventListener("hidden.bs.toast", function () {
     toastElement.remove();
   });
 }
 
-// Confirm action
 function confirmAction(message = "Are you sure?", callback) {
   if (confirm(message)) {
     if (typeof callback === "function") {
@@ -503,24 +488,20 @@ function confirmAction(message = "Are you sure?", callback) {
   return false;
 }
 
-// Format number with commas
 function formatNumber(num) {
   return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
-// Validate email
 function isValidEmail(email) {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return re.test(email);
 }
 
-// Validate phone number
 function isValidPhone(phone) {
   const re = /^[0-9]{10,15}$/;
   return re.test(phone.replace(/[\s\-\(\)]/g, ""));
 }
 
-// Print specific element
 function printElement(elementId) {
   const element = document.getElementById(elementId);
   if (element) {
@@ -537,7 +518,6 @@ function printElement(elementId) {
   }
 }
 
-// Export table to CSV
 function exportTableToCSV(tableId, filename = "export.csv") {
   const table = document.getElementById(tableId);
   if (!table) return;
@@ -548,7 +528,6 @@ function exportTableToCSV(tableId, filename = "export.csv") {
   for (let i = 0; i < rows.length; i++) {
     const row = [];
     const cols = rows[i].querySelectorAll("td, th");
-
     for (let j = 0; j < cols.length; j++) {
       let data = cols[j].innerText
         .replace(/(\r\n|\n|\r)/gm, "")
@@ -556,11 +535,9 @@ function exportTableToCSV(tableId, filename = "export.csv") {
       data = data.replace(/"/g, '""');
       row.push('"' + data + '"');
     }
-
     csv.push(row.join(","));
   }
 
-  // Download CSV
   const csvString = csv.join("\n");
   const link = document.createElement("a");
   link.setAttribute(
@@ -575,43 +552,38 @@ function exportTableToCSV(tableId, filename = "export.csv") {
 }
 
 // ============================================
-// ADDITIONAL CSS FOR DYNAMIC ELEMENTS
+// BACK TO TOP CSS (injected once)
 // ============================================
 
-// Add CSS for back to top button
 const backToTopStyle = document.createElement("style");
 backToTopStyle.innerHTML = `
-    .back-to-top {
-        position: fixed;
-        bottom: 80px;
-        right: 20px;
-        width: 45px;
-        height: 45px;
-       background: linear-gradient(135deg, #00c2e0 0%, #00e5ff 100%);
-        color: white;
-        border: none;
-        border-radius: 50%;
-        cursor: pointer;
-        opacity: 0;
-        visibility: hidden;
-        transition: all 0.3s;
-        z-index: 998;
-        box-shadow: 0 3px 15px rgba(0,0,0,0.3);
-    }
-    
-    .back-to-top.show {
-        opacity: 1;
-        visibility: visible;
-    }
-    
-    .back-to-top:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 5px 20px rgba(0,0,0,0.4);
-    }
-    
-    .back-to-top i {
-        font-size: 1.2rem;
-    }
+  .back-to-top {
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    width: 45px;
+    height: 45px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s;
+    z-index: 998;
+    box-shadow: 0 3px 15px rgba(0,0,0,0.3);
+  }
+  .back-to-top.show {
+    opacity: 1;
+    visibility: visible;
+  }
+  .back-to-top:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+  }
+  .back-to-top i {
+    font-size: 1.2rem;
+  }
 `;
-
 document.head.appendChild(backToTopStyle);
