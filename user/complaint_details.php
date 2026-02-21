@@ -1,4 +1,3 @@
-
 <?php
 // ============================================
 // COMPLAINT DETAILS PAGE
@@ -864,7 +863,7 @@ if ($reopen_requests->num_rows > 0):
                                 <small class="timeline-date"><i class="bi bi-clock"></i> <?php echo formatDateTime($h['changed_date']); ?></small>
                             </div>
                             <?php if (!empty($h['comment'])): ?>
-                                <div class="mt-2 text-muted" style="font-size:0.88rem; word-break:break-word;">
+                                <div class="mt-2 text-muted">
                                     <i class="bi bi-chat-quote"></i> <?php echo htmlspecialchars($h['comment']); ?>
                                 </div>
                             <?php endif; ?>
@@ -1171,18 +1170,16 @@ function createStatusIndicator() {
         position: fixed;
         bottom: 20px;
         right: 20px;
-        background: rgba(0, 194, 224, 0.95);
-        color: #0d1b2a;
-        padding: 10px 18px;
+        background: rgba(102, 126, 234, 0.95);
+        color: white;
+        padding: 12px 20px;
         border-radius: 25px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         display: none;
         align-items: center;
         gap: 10px;
         z-index: 1000;
-        font-size: 13px;
-        font-weight: 600;
-        max-width: calc(100vw - 40px);
+        font-size: 14px;
         animation: slideIn 0.3s ease;
     `;
     indicator.innerHTML = '<i class="bi bi-arrow-repeat" style="animation: spin 1s linear infinite;"></i> Checking for updates...';
@@ -1219,15 +1216,13 @@ function showToast(message, type = 'success') {
         position: fixed;
         top: 80px;
         right: 20px;
-        left: 20px;
         background: ${type === 'success' ? '#28a745' : type === 'info' ? '#17a2b8' : '#ffc107'};
         color: white;
-        padding: 14px 18px;
-        border-radius: 10px;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+        padding: 15px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         z-index: 10000;
-        max-width: 420px;
-        margin-left: auto;
+        min-width: 300px;
         animation: slideIn 0.3s ease;
     `;
     toast.innerHTML = `
