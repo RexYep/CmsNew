@@ -119,7 +119,7 @@ $resolved_complaints = $conn->query("SELECT COUNT(*) as total FROM complaints WH
 
 // Determine avatar display
 if (!empty($user['avatar_url'])) {
-    $avatar_display = getOptimizedImageUrl($user['avatar_url'], 150, 150);
+   $avatar_display = $user['avatar_url'];
     $has_avatar = true;
 } elseif (!empty($user['profile_picture']) && file_exists('../' . $user['profile_picture'])) {
     $avatar_display = SITE_URL . $user['profile_picture'];

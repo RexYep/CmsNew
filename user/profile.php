@@ -257,7 +257,7 @@ include '../includes/navbar.php';
                 // Display avatar - prefer Cloudinary URL, fallback to profile_picture
                 if (!empty($user['avatar_url'])) {
                     // Use Cloudinary with optimization
-                    $avatar_display = getOptimizedImageUrl($user['avatar_url'], 150, 150);
+                    $avatar_display = $user['avatar_url'];
                     $has_avatar = true;
                 } elseif (!empty($user['profile_picture']) && file_exists('../' . $user['profile_picture'])) {
                     // Fallback to local file
@@ -398,7 +398,6 @@ include '../includes/navbar.php';
                                      style="object-fit: cover;"
                                      id="currentImage">
                             <?php else: ?>
-                                <!-- BAGO -->
                         <div class="user-avatar" style="width: 36px; height: 36px; font-size: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                             <?php echo strtoupper(substr($_SESSION['full_name'], 0, 1)); ?>
                         </div>
