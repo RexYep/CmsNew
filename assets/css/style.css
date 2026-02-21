@@ -5,8 +5,8 @@
 
 /* ========== ROOT VARIABLES ========== */
 :root {
-  --primary-color: #5a5d62; /* ← Soft Charcoal for buttons */
-  --secondary-color: #6b6e73;
+  --primary-color: #00c2e0; /* ← Cyan — matches index.php */
+  --secondary-color: #0a3a4a; /* ← Dark Cyan */
   --sidebar-width: 260px;
   --topnav-height: 70px;
   --success-color: #28a745;
@@ -41,18 +41,18 @@
 
 /* Dark mode colors */
 [data-theme="dark"] {
-  --light-bg: #2b2d31; /* Soft charcoal */
-  --dark-text: #eff1f3; /* Bright gray-white */
-  --bg-primary: #2b2d31; /* Main background */
-  --bg-secondary: #3f4247; /* Secondary - medium gray */
-  --text-primary: #eff1f3; /* Main text - very light */
-  --text-secondary: #bfc3c9; /* Secondary text - medium gray */
-  --border-color: #52555a; /* Borders - mid-tone */
-  --card-bg: #3f4247; /* Cards - lighter gray */
-  --input-bg: #35383c; /* Inputs - darker gray */
-  --input-border: #52555a; /* Input borders */
-  --box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
-  --table-hover-bg: #52555a; /* Table hover */
+  --light-bg: #0d1b2a; /* Navy — matches index.php */
+  --dark-text: #e0f4ff; /* Light blue-white */
+  --bg-primary: #0d1b2a; /* Main bg — navy */
+  --bg-secondary: #132236; /* Secondary — navy-2 */
+  --text-primary: #e0f4ff; /* Main text — readable on navy */
+  --text-secondary: #8fa3b8; /* Muted — matches index.php */
+  --border-color: rgba(0, 194, 224, 0.15); /* Cyan border */
+  --card-bg: #1a2f48; /* Cards — navy-3 */
+  --input-bg: #132236; /* Inputs — navy-2 */
+  --input-border: rgba(0, 194, 224, 0.25); /* Cyan input border */
+  --box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  --table-hover-bg: #1e3a55; /* Table hover — navy accent */
 }
 
 /* Dark mode - force text colors on all elements */
@@ -116,11 +116,11 @@
 
 /* Fix links in dark mode */
 [data-theme="dark"] a {
-  color: #7dd3fc;
+  color: #00c2e0;
 }
 
 [data-theme="dark"] a:hover {
-  color: #38bdf8;
+  color: #00e5ff;
 }
 
 /* Fix text-muted in dark mode */
@@ -270,8 +270,8 @@
 }
 
 [data-theme="dark"] .badge.bg-primary {
-  background-color: #667eea !important;
-  color: #fff !important;
+  background-color: #00c2e0 !important;
+  color: #0d1b2a !important;
 }
 
 [data-theme="dark"] .badge.bg-secondary {
@@ -316,23 +316,27 @@
 }
 
 [data-theme="dark"] .alert-info {
-  background-color: var(--alert-info-bg);
-  color: var(--alert-info-text);
+  background-color: rgba(0, 194, 224, 0.1);
+  color: #7ee8f8;
+  border-color: rgba(0, 194, 224, 0.3);
 }
 
 [data-theme="dark"] .alert-success {
-  background-color: var(--alert-success-bg);
-  color: var(--alert-success-text);
+  background-color: rgba(40, 167, 69, 0.12);
+  color: #86efac;
+  border-color: rgba(40, 167, 69, 0.3);
 }
 
 [data-theme="dark"] .alert-warning {
-  background-color: var(--alert-warning-bg);
-  color: var(--alert-warning-text);
+  background-color: rgba(255, 193, 7, 0.1);
+  color: #fde68a;
+  border-color: rgba(255, 193, 7, 0.3);
 }
 
 [data-theme="dark"] .alert-danger {
-  background-color: var(--alert-danger-bg);
-  color: var(--alert-danger-text);
+  background-color: rgba(220, 53, 69, 0.12);
+  color: #fca5a5;
+  border-color: rgba(220, 53, 69, 0.3);
 }
 
 /* Complaint description styling */
@@ -365,7 +369,7 @@
 
 /* Stats card text colors in dark mode */
 [data-theme="dark"] .stats-card h2 {
-  color: #667eea !important;
+  color: #00c2e0 !important;
 }
 
 [data-theme="dark"] .stats-card h6 {
@@ -479,8 +483,8 @@ a:hover {
   width: var(--sidebar-width);
   background: linear-gradient(
     180deg,
-    #4a4d52 0%,
-    /* ← Charcoal Gray (darker) */ #6b6e73 100% /* ← Light Charcoal (lighter) */
+    #0d1b2a 0%,
+    /* ← Navy (matches index.php) */ #132236 100% /* ← Navy-2 */
   );
   padding: 20px 0;
   z-index: 1000;
@@ -494,7 +498,7 @@ a:hover {
   padding: 20px 25px;
   text-align: center;
   color: white;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  border-bottom: 1px solid rgba(0, 194, 224, 0.2);
   margin-bottom: 20px;
 }
 
@@ -541,16 +545,16 @@ a:hover {
 }
 
 .sidebar-menu a:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: white;
-  border-left-color: white;
+  background: rgba(0, 194, 224, 0.12);
+  color: #00c2e0;
+  border-left-color: #00c2e0;
   padding-left: 30px;
 }
 
 .sidebar-menu a.active {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  border-left-color: white;
+  background: rgba(0, 194, 224, 0.18);
+  color: #00c2e0;
+  border-left-color: #00c2e0;
   font-weight: 600;
 }
 
@@ -767,15 +771,15 @@ a:hover {
 
 /* Dark mode adjustments */
 [data-theme="dark"] .btn-outline-primary.btn-sm {
-  background-color: #4a3d1c !important;
-  border-color: #ffc107 !important;
-  color: #fde047 !important;
+  background-color: rgba(0, 194, 224, 0.1) !important;
+  border-color: #00c2e0 !important;
+  color: #00e5ff !important;
 }
 
 [data-theme="dark"] .btn-outline-warning.btn-sm {
-  background-color: #4a3d1c !important;
+  background-color: rgba(255, 193, 7, 0.12) !important;
   border-color: #ffc107 !important;
-  color: #fde047 !important;
+  color: #fde68a !important;
 }
 
 [data-theme="dark"] .btn-outline-danger.btn-sm {
@@ -803,7 +807,7 @@ a:hover {
 .form-control:focus,
 .form-select:focus {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+  box-shadow: 0 0 0 0.2rem rgba(0, 194, 224, 0.25);
   outline: none;
   background-color: var(--input-bg);
   color: var(--text-primary);
@@ -1095,7 +1099,7 @@ a:hover {
 }
 
 .list-group-item.list-group-item-primary {
-  background-color: rgba(102, 126, 234, 0.2);
+  background-color: rgba(0, 194, 224, 0.12);
   color: var(--text-primary);
 }
 
@@ -1130,7 +1134,7 @@ a:hover {
     var(--secondary-color) 100%
   );
   border-radius: 50%;
-  color: #333;
+  color: #fff;
   border: none;
   box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
   z-index: 999;
@@ -1357,7 +1361,7 @@ a:hover {
   right: 20px;
   width: 45px;
   height: 45px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #00c2e0 0%, #0a3a4a 100%);
   color: white;
   border: none;
   border-radius: 50%;
@@ -1439,8 +1443,8 @@ a:hover {
 [data-theme="dark"] .admin-sidebar {
   background: linear-gradient(
     180deg,
-    #2b2d31 0%,
-    /* ← Deep Charcoal (darker) */ #3f4247 100%
+    #0d1b2a 0%,
+    /* ← Deep Charcoal (darker) */ #1a2f48 100%
       /* ← Medium Charcoal (lighter) */
   ) !important;
   color: var(--text-primary) !important;
@@ -1817,7 +1821,7 @@ td .d-flex.gap-2 {
 
 /* NEW comment badge gradient */
 .badge-new {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  background: linear-gradient(135deg, #00c2e0 0%, #0a3a4a 100%) !important;
   box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
@@ -1871,7 +1875,7 @@ td .d-flex.gap-2 {
 }
 
 [data-theme="dark"] .badge-new {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  background: linear-gradient(135deg, #00c2e0 0%, #0a3a4a 100%) !important;
   color: white !important;
 }
 
@@ -2187,7 +2191,7 @@ td .d-flex.gap-2 {
 
 [data-theme="dark"] .alert-info {
   background-color: #1c3d4a !important;
-  color: #7dd3fc !important;
+  color: #7ee8f8 !important;
 }
 
 /* ========== FIX 9: Button Text ========== */
@@ -3241,4 +3245,36 @@ pre {
   #confirmationForm .btn.flex-fill {
     width: 100%;
   }
+}
+
+/* =========================================
+   MONTHLY COMPARISON DARK MODE FIX
+   ========================================= */
+
+.month-card {
+  border-radius: 10px;
+  color: #ffffff;
+}
+
+/* Current Month - always readable */
+.current-month {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #ffffff;
+}
+
+/* Last Month - Light Mode */
+.last-month {
+  background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+  color: #212529;
+}
+
+/* Last Month - Dark Mode (Better Contrast) */
+[data-theme="dark"] .last-month {
+  background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+  color: #ffffff;
+}
+[data-theme="dark"] .badge.bg-warning {
+  background-color: #fbbf24 !important;
+  color: #111827 !important;
+  font-weight: 600;
 }

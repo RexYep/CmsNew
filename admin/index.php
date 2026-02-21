@@ -426,14 +426,14 @@ include '../includes/navbar.php';
             <div class="card-body">
                 <div class="row text-center">
                     <div class="col-md-6 mb-3">
-                        <div class="p-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; color: white;">
+                        <div class="p-4 month-card current-month">
                             <h6 class="mb-2">Current Month</h6>
                             <h2 class="mb-0"><?php echo $current_month_count; ?></h2>
                             <small><?php echo date('F Y'); ?></small>
                         </div>
                     </div>
                     <div class="col-md-6 mb-3">
-                        <div class="p-4" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); border-radius: 10px; color: #333;">
+                        <div class="p-4 month-card last-month">
                             <h6 class="mb-2">Last Month</h6>
                             <h2 class="mb-0"><?php echo $last_month_count; ?></h2>
                             <small><?php echo date('F Y', strtotime('-1 month')); ?></small>

@@ -393,7 +393,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         @media (max-width: 480px) {
             .auth-card { padding: 32px 24px; border-radius: 20px; }
             .auth-header h1 { font-size: 1.4rem; }
-            .back-home { display: none; }
         }
     </style>
 </head>

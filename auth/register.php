@@ -354,7 +354,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             body { padding: 20px 16px; }
             .auth-card { padding: 28px 20px; border-radius: 20px; }
             .auth-header h1 { font-size: 1.4rem; }
-            .back-home { display: none; }
+    
         }
     </style>
 </head>

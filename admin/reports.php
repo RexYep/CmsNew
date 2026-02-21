@@ -202,10 +202,16 @@ include '../includes/navbar.php';
                                 <?php 
                                 $percentage = $total_complaints > 0 ? round(($stat['count'] / $total_complaints) * 100, 1) : 0;
                                 ?>
-                                <div class="progress" style="height: 20px;">
-                                    <div class="progress-bar" role="progressbar" style="width: <?php echo $percentage; ?>%">
-                                        <?php echo $percentage; ?>%
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="progress flex-grow-1" style="height: 10px; min-width: 60px;">
+                                        <div class="progress-bar" role="progressbar" 
+                                             style="width: <?php echo max($percentage, 3); ?>%"
+                                             aria-valuenow="<?php echo $percentage; ?>" aria-valuemin="0" aria-valuemax="100">
+                                        </div>
                                     </div>
+                                    <span class="text-muted" style="font-size: 0.82rem; min-width: 38px; text-align: right;">
+                                        <?php echo $percentage; ?>%
+                                    </span>
                                 </div>
                             </td>
                         </tr>
@@ -244,11 +250,17 @@ include '../includes/navbar.php';
                                 <?php 
                                 $percentage = $total_complaints > 0 ? round(($stat['count'] / $total_complaints) * 100, 1) : 0;
                                 ?>
-                                <div class="progress" style="height: 20px;">
-                                    <div class="progress-bar bg-<?php echo $stat['priority'] == 'High' ? 'danger' : ($stat['priority'] == 'Medium' ? 'warning' : 'success'); ?>" 
-                                         role="progressbar" style="width: <?php echo $percentage; ?>%">
-                                        <?php echo $percentage; ?>%
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="progress flex-grow-1" style="height: 10px; min-width: 60px;">
+                                        <div class="progress-bar bg-<?php echo $stat['priority'] == 'High' ? 'danger' : ($stat['priority'] == 'Medium' ? 'warning' : 'success'); ?>" 
+                                             role="progressbar" 
+                                             style="width: <?php echo max($percentage, 3); ?>%"
+                                             aria-valuenow="<?php echo $percentage; ?>" aria-valuemin="0" aria-valuemax="100">
+                                        </div>
                                     </div>
+                                    <span class="text-muted" style="font-size: 0.82rem; min-width: 38px; text-align: right;">
+                                        <?php echo $percentage; ?>%
+                                    </span>
                                 </div>
                             </td>
                         </tr>
@@ -352,11 +364,16 @@ include '../includes/navbar.php';
                             <td><?php echo formatDate($stat['date']); ?></td>
                             <td><strong><?php echo $stat['count']; ?></strong></td>
                             <td>
-                                <div class="progress" style="height: 25px;">
-                                    <div class="progress-bar bg-primary" role="progressbar" 
-                                         style="width: <?php echo $bar_width; ?>%">
-                                        <?php echo $stat['count']; ?>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="progress flex-grow-1" style="height: 10px; min-width: 60px;">
+                                        <div class="progress-bar bg-primary" role="progressbar" 
+                                             style="width: <?php echo max($bar_width, 3); ?>%"
+                                             aria-valuenow="<?php echo $bar_width; ?>" aria-valuemin="0" aria-valuemax="100">
+                                        </div>
                                     </div>
+                                    <span class="text-muted" style="font-size: 0.82rem; min-width: 38px; text-align: right;">
+                                        <?php echo $stat['count']; ?> filed
+                                    </span>
                                 </div>
                             </td>
                         </tr>
@@ -378,12 +395,14 @@ include '../includes/navbar.php';
                     <button class="btn btn-outline-success" onclick="window.print();">
                         <i class="bi bi-printer"></i> Print Report
                     </button>
-                    <button class="btn btn-outline-primary" onclick="alert('Export to PDF feature coming soon!');">
+                    <a href="export_pdf.php?start_date=<?php echo urlencode($start_date); ?>&end_date=<?php echo urlencode($end_date); ?>" 
+                       target="_blank" class="btn btn-outline-primary">
                         <i class="bi bi-file-pdf"></i> Export to PDF
-                    </button>
-                    <button class="btn btn-outline-info" onclick="alert('Export to Excel feature coming soon!');">
+                    </a>
+                    <a href="export_excel.php?start_date=<?php echo urlencode($start_date); ?>&end_date=<?php echo urlencode($end_date); ?>" 
+                       class="btn btn-outline-info">
                         <i class="bi bi-file-excel"></i> Export to Excel
-                    </button>
+                    </a>
                 </div>
             </div>
         </div>
