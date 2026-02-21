@@ -5,8 +5,8 @@
 
 /* ========== ROOT VARIABLES ========== */
 :root {
-  --primary-color: #00c2e0; /* cyan accent */
-  --secondary-color: #0d1b2a; /* navy */
+  --primary-color: #5a5d62; /* ← Soft Charcoal for buttons */
+  --secondary-color: #6b6e73;
   --sidebar-width: 260px;
   --topnav-height: 70px;
   --success-color: #28a745;
@@ -41,18 +41,18 @@
 
 /* Dark mode colors */
 [data-theme="dark"] {
-  --light-bg: #0d1b2a;
-  --dark-text: #e2eaf3;
-  --bg-primary: #0d1b2a; /* navy main */
-  --bg-secondary: #132236; /* navy secondary */
-  --text-primary: #e2eaf3;
-  --text-secondary: #8fa3b8;
-  --border-color: rgba(0, 194, 224, 0.15);
-  --card-bg: #111e2e; /* card navy */
-  --input-bg: #0d1b2a;
-  --input-border: rgba(0, 194, 224, 0.2);
-  --box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-  --table-hover-bg: #1a2f48;
+  --light-bg: #2b2d31; /* Soft charcoal */
+  --dark-text: #eff1f3; /* Bright gray-white */
+  --bg-primary: #2b2d31; /* Main background */
+  --bg-secondary: #3f4247; /* Secondary - medium gray */
+  --text-primary: #eff1f3; /* Main text - very light */
+  --text-secondary: #bfc3c9; /* Secondary text - medium gray */
+  --border-color: #52555a; /* Borders - mid-tone */
+  --card-bg: #3f4247; /* Cards - lighter gray */
+  --input-bg: #35383c; /* Inputs - darker gray */
+  --input-border: #52555a; /* Input borders */
+  --box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+  --table-hover-bg: #52555a; /* Table hover */
 }
 
 /* Dark mode - force text colors on all elements */
@@ -116,11 +116,13 @@
 
 /* Fix links in dark mode */
 [data-theme="dark"] a {
-  color: #00c2e0;
+  color: #7dd3fc;
 }
+
 [data-theme="dark"] a:hover {
-  color: #00e5ff;
+  color: #38bdf8;
 }
+
 /* Fix text-muted in dark mode */
 [data-theme="dark"] .text-muted {
   color: var(--text-secondary) !important;
@@ -363,7 +365,7 @@
 
 /* Stats card text colors in dark mode */
 [data-theme="dark"] .stats-card h2 {
-  color: #00c2e0 !important;
+  color: #667eea !important;
 }
 
 [data-theme="dark"] .stats-card h6 {
@@ -475,7 +477,11 @@ a:hover {
   left: 0;
   height: 100vh;
   width: var(--sidebar-width);
-  background: linear-gradient(180deg, #0d1b2a 0%, #1a2f48 100%);
+  background: linear-gradient(
+    180deg,
+    #4a4d52 0%,
+    /* ← Charcoal Gray (darker) */ #6b6e73 100% /* ← Light Charcoal (lighter) */
+  );
   padding: 20px 0;
   z-index: 1000;
   box-shadow: 2px 0 15px rgba(0, 0, 0, 0.1);
@@ -537,14 +543,14 @@ a:hover {
 .sidebar-menu a:hover {
   background: rgba(255, 255, 255, 0.15);
   color: white;
-  border-left-color: #00c2e0;
+  border-left-color: white;
   padding-left: 30px;
 }
 
 .sidebar-menu a.active {
   background: rgba(255, 255, 255, 0.2);
   color: white;
-  border-left-color: #00c2e0;
+  border-left-color: white;
   font-weight: 600;
 }
 
@@ -1351,7 +1357,7 @@ a:hover {
   right: 20px;
   width: 45px;
   height: 45px;
-  background: linear-gradient(135deg, #00c2e0 0%, #00e5ff 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
   border-radius: 50%;
@@ -1431,9 +1437,14 @@ a:hover {
 /* Fix sidebar + admin panel */
 [data-theme="dark"] .sidebar,
 [data-theme="dark"] .admin-sidebar {
-  background: linear-gradient(180deg, #080f1a 0%, #0d1b2a 100%) !important;
+  background: linear-gradient(
+    180deg,
+    #2b2d31 0%,
+    /* ← Deep Charcoal (darker) */ #3f4247 100%
+      /* ← Medium Charcoal (lighter) */
+  ) !important;
   color: var(--text-primary) !important;
-  box-shadow: 2px 0 15px rgba(0, 0, 0, 0.6) !important;
+  box-shadow: 2px 0 15px rgba(0, 0, 0, 0.5) !important;
 }
 
 /* ========== FILE UPLOAD PREVIEW STYLES ========== */
@@ -3017,4 +3028,217 @@ pre {
 .navbar-right {
   display: flex;
   align-items: center;
+}
+
+/* =============================================
+   COMPLAINT DETAILS — RESPONSIVE FIXES
+   ============================================= */
+
+/* History & Reassignment timeline items */
+.timeline-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.timeline-row .timeline-date {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.timeline-row .timeline-body {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+/* Status badge chain (old → new) */
+.status-chain {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+/* Comment item header */
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.comment-header .comment-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.comment-header .comment-date {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Star rating */
+.star-rating-wrap {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Card header badges */
+.card-header-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+/* Reassignment badge row (old admin → new admin) */
+.reassign-chain {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 576px) {
+  /* Complaint card header */
+  .card-header .d-flex {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  /* Sidebar cards */
+  .col-lg-4 .card-body {
+    padding: 14px;
+  }
+
+  /* Timeline dates go below on small screens */
+  .timeline-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .timeline-row .timeline-date {
+    align-self: flex-start;
+  }
+
+  /* Comment avatar */
+  .comment-item .user-avatar {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 0.85rem !important;
+    flex-shrink: 0;
+  }
+
+  /* Buttons inside cards */
+  .col-lg-4 .card-body .btn {
+    font-size: 0.85rem;
+  }
+
+  /* Quick actions */
+  .d-grid .btn {
+    font-size: 0.85rem;
+    padding: 8px 10px;
+  }
+}
+
+@media (max-width: 400px) {
+  /* Prevent badge overflow on very small screens */
+  .card-header-badges .badge,
+  .status-chain .badge,
+  .reassign-chain .badge {
+    font-size: 0.7rem !important;
+    padding: 4px 7px !important;
+  }
+
+  /* Star rating text */
+  .star-rating-wrap span {
+    font-size: 0.82rem !important;
+  }
+}
+
+/* =============================================
+   RATING BUTTONS — RESPONSIVE GRID
+   ============================================= */
+
+/* Default: single row, all 5 buttons */
+.rating-btn-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.rating-btn-grid .rating-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  padding: 12px 6px;
+  gap: 2px;
+}
+
+.rating-btn-grid .rating-label {
+  font-size: 0.7rem;
+  display: block;
+}
+
+.rating-btn-grid .rating-star {
+  font-size: 0.6rem;
+  display: block;
+}
+
+/* Tablet: 3+2 layout */
+@media (max-width: 576px) {
+  .rating-btn-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* Last 2 buttons center-aligned */
+  .rating-btn-grid .rating-btn:nth-child(4),
+  .rating-btn-grid .rating-btn:nth-child(5) {
+    grid-column: span 1;
+  }
+
+  .rating-btn-grid .rating-btn {
+    font-size: 1.3rem;
+    padding: 10px 4px;
+  }
+}
+
+/* Very small: 2+2+1 */
+@media (max-width: 380px) {
+  .rating-btn-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .rating-btn-grid .rating-btn:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Confirm/Reopen buttons responsive */
+@media (max-width: 480px) {
+  #confirmationForm .d-flex.gap-3 {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  #confirmationForm .btn.flex-fill {
+    width: 100%;
+  }
 }

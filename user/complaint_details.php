@@ -1,3 +1,4 @@
+
 <?php
 // ============================================
 // COMPLAINT DETAILS PAGE
@@ -287,7 +288,7 @@ include '../includes/navbar.php';
             <div class="card-header">
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
         <span><i class="bi bi-file-text"></i> Complaint #<?php echo $complaint['complaint_id']; ?></span>
-        <div class="d-flex gap-2">
+        <div class="card-header-badges">
             <!-- Approval Status Badge -->
             <?php
             $approval_badges = [
@@ -650,36 +651,31 @@ if ($attachments->num_rows > 0):
                     <input type="hidden" name="rating" id="selectedRating" value="">
                     
                     <!-- Star Rating Buttons -->
-                    <div class="d-flex justify-content-center gap-3 mb-4">
-                        <button type="button" class="btn btn-outline-danger rating-btn" data-rating="1" 
-                                style="font-size: 1.5rem; padding: 15px 25px;">
-                            <i class="bi bi-emoji-frown"></i><br>
-                            <small style="font-size: 0.7rem;">Poor</small><br>
-                            <small style="font-size: 0.6rem;">1 ⭐</small>
+                    <div class="rating-btn-grid mb-4">
+                        <button type="button" class="btn btn-outline-danger rating-btn" data-rating="1">
+                            <i class="bi bi-emoji-frown"></i>
+                            <span class="rating-label">Poor</span>
+                            <span class="rating-star">1 ⭐</span>
                         </button>
-                        <button type="button" class="btn btn-outline-warning rating-btn" data-rating="2"
-                                style="font-size: 1.5rem; padding: 15px 25px;">
-                            <i class="bi bi-emoji-neutral"></i><br>
-                            <small style="font-size: 0.7rem;">Fair</small><br>
-                            <small style="font-size: 0.6rem;">2 ⭐</small>
+                        <button type="button" class="btn btn-outline-warning rating-btn" data-rating="2">
+                            <i class="bi bi-emoji-neutral"></i>
+                            <span class="rating-label">Fair</span>
+                            <span class="rating-star">2 ⭐</span>
                         </button>
-                        <button type="button" class="btn btn-outline-info rating-btn" data-rating="3"
-                                style="font-size: 1.5rem; padding: 15px 25px;">
-                            <i class="bi bi-emoji-smile"></i><br>
-                            <small style="font-size: 0.7rem;">Good</small><br>
-                            <small style="font-size: 0.6rem;">3 ⭐</small>
+                        <button type="button" class="btn btn-outline-info rating-btn" data-rating="3">
+                            <i class="bi bi-emoji-smile"></i>
+                            <span class="rating-label">Good</span>
+                            <span class="rating-star">3 ⭐</span>
                         </button>
-                        <button type="button" class="btn btn-outline-primary rating-btn" data-rating="4"
-                                style="font-size: 1.5rem; padding: 15px 25px;">
-                            <i class="bi bi-emoji-laughing"></i><br>
-                            <small style="font-size: 0.7rem;">Very Good</small><br>
-                            <small style="font-size: 0.6rem;">4 ⭐</small>
+                        <button type="button" class="btn btn-outline-primary rating-btn" data-rating="4">
+                            <i class="bi bi-emoji-laughing"></i>
+                            <span class="rating-label">Very Good</span>
+                            <span class="rating-star">4 ⭐</span>
                         </button>
-                        <button type="button" class="btn btn-outline-success rating-btn" data-rating="5"
-                                style="font-size: 1.5rem; padding: 15px 25px;">
-                            <i class="bi bi-emoji-heart-eyes"></i><br>
-                            <small style="font-size: 0.7rem;">Excellent</small><br>
-                            <small style="font-size: 0.6rem;">5 ⭐</small>
+                        <button type="button" class="btn btn-outline-success rating-btn" data-rating="5">
+                            <i class="bi bi-emoji-heart-eyes"></i>
+                            <span class="rating-label">Excellent</span>
+                            <span class="rating-star">5 ⭐</span>
                         </button>
                     </div>
                     
@@ -805,14 +801,14 @@ if ($reopen_requests->num_rows > 0):
         <?php while ($req = $reopen_requests->fetch_assoc()): ?>
       <div class="mb-3 p-3 border rounded reopen-request-item" 
      data-status="<?php echo $req['status']; ?>">
-    <div class="d-flex justify-content-between align-items-start mb-2">
-        <div>
+    <div class="timeline-row mb-2">
+        <div class="timeline-body">
             <strong class="requester-name"><?php echo htmlspecialchars($req['requester_name']); ?></strong>
             <span class="badge bg-<?php echo $req['status'] == 'pending' ? 'warning text-dark' : ($req['status'] == 'approved' ? 'success' : 'danger'); ?> ms-2">
                 <?php echo ucfirst($req['status']); ?>
             </span>
         </div>
-        <small class="text-muted request-date"><?php echo formatDateTime($req['created_at']); ?></small>
+        <small class="timeline-date request-date"><i class="bi bi-clock"></i> <?php echo formatDateTime($req['created_at']); ?></small>
     </div>
     
     <div class="mb-2 request-reason-section">
@@ -848,22 +844,27 @@ if ($reopen_requests->num_rows > 0):
                         <?php while ($h = $history->fetch_assoc()): ?>
                         <div class="timeline-item mb-3 pb-3" style="border-left: 2px solid #e0e0e0; padding-left: 20px; position: relative;">
                             <div style="position: absolute; left: -8px; top: 0; width: 14px; height: 14px; background: #667eea; border-radius: 50%;"></div>
-                            <div class="d-flex justify-content-between">
-                                <div>
+                            <div class="timeline-row">
+                                <div class="timeline-body">
                                     <strong><?php echo htmlspecialchars($h['full_name']); ?></strong>
                                     <?php if ($h['old_status'] && $h['new_status']): ?>
-                                        changed status from 
-                                        <span class="badge bg-secondary"><?php echo $h['old_status']; ?></span> to 
-                                        <span class="<?php echo getStatusBadge($h['new_status']); ?>"><?php echo $h['new_status']; ?></span>
+                                        <span class="d-inline"> changed status from</span>
+                                        <div class="status-chain">
+                                            <span class="badge bg-secondary"><?php echo $h['old_status']; ?></span>
+                                            <i class="bi bi-arrow-right" style="font-size:0.75rem;"></i>
+                                            <span class="<?php echo getStatusBadge($h['new_status']); ?>"><?php echo $h['new_status']; ?></span>
+                                        </div>
                                     <?php elseif ($h['new_status']): ?>
-                                        set status to 
-                                        <span class="<?php echo getStatusBadge($h['new_status']); ?>"><?php echo $h['new_status']; ?></span>
+                                        <span class="d-inline"> set status to</span>
+                                        <div class="status-chain">
+                                            <span class="<?php echo getStatusBadge($h['new_status']); ?>"><?php echo $h['new_status']; ?></span>
+                                        </div>
                                     <?php endif; ?>
                                 </div>
-                                <small class="text-muted"><?php echo formatDateTime($h['changed_date']); ?></small>
+                                <small class="timeline-date"><i class="bi bi-clock"></i> <?php echo formatDateTime($h['changed_date']); ?></small>
                             </div>
                             <?php if (!empty($h['comment'])): ?>
-                                <div class="mt-2 text-muted">
+                                <div class="mt-2 text-muted" style="font-size:0.88rem; word-break:break-word;">
                                     <i class="bi bi-chat-quote"></i> <?php echo htmlspecialchars($h['comment']); ?>
                                 </div>
                             <?php endif; ?>
@@ -892,8 +893,8 @@ if ($reopen_requests->num_rows > 0):
                                         <?php echo strtoupper(substr($comment['full_name'], 0, 1)); ?>
                                     </div>
                                     <div class="flex-grow-1">
-                                        <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <div>
+                                        <div class="comment-header">
+                                            <div class="comment-meta">
                                                 <strong><?php echo htmlspecialchars($comment['full_name']); ?></strong>
                                                 <?php if ($comment['role'] == 'admin'): ?>
                                                     <span class="badge bg-warning text-dark ms-1">
@@ -905,11 +906,11 @@ if ($reopen_requests->num_rows > 0):
                                                     </span>
                                                 <?php endif; ?>
                                             </div>
-                                            <small class="text-muted">
+                                            <small class="comment-date">
                                                 <i class="bi bi-clock"></i> <?php echo formatDateTime($comment['created_at']); ?>
                                             </small>
                                         </div>
-                                        <p class="mb-0" style="white-space: pre-wrap;"><?php echo htmlspecialchars($comment['comment']); ?></p>
+                                        <p class="mb-0" style="white-space: pre-wrap; word-break: break-word;"><?php echo htmlspecialchars($comment['comment']); ?></p>
                                     </div>
                                 </div>
                             </div>
@@ -1170,16 +1171,18 @@ function createStatusIndicator() {
         position: fixed;
         bottom: 20px;
         right: 20px;
-        background: rgba(102, 126, 234, 0.95);
-        color: white;
-        padding: 12px 20px;
+        background: rgba(0, 194, 224, 0.95);
+        color: #0d1b2a;
+        padding: 10px 18px;
         border-radius: 25px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.25);
         display: none;
         align-items: center;
         gap: 10px;
         z-index: 1000;
-        font-size: 14px;
+        font-size: 13px;
+        font-weight: 600;
+        max-width: calc(100vw - 40px);
         animation: slideIn 0.3s ease;
     `;
     indicator.innerHTML = '<i class="bi bi-arrow-repeat" style="animation: spin 1s linear infinite;"></i> Checking for updates...';
@@ -1216,13 +1219,15 @@ function showToast(message, type = 'success') {
         position: fixed;
         top: 80px;
         right: 20px;
+        left: 20px;
         background: ${type === 'success' ? '#28a745' : type === 'info' ? '#17a2b8' : '#ffc107'};
         color: white;
-        padding: 15px 20px;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        padding: 14px 18px;
+        border-radius: 10px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.25);
         z-index: 10000;
-        min-width: 300px;
+        max-width: 420px;
+        margin-left: auto;
         animation: slideIn 0.3s ease;
     `;
     toast.innerHTML = `

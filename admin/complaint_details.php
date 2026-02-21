@@ -549,7 +549,7 @@ include '../includes/navbar.php';
             <div class="card-header">
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
         <span><i class="bi bi-file-text"></i> Complaint #<?php echo $complaint['complaint_id']; ?></span>
-        <div class="d-flex gap-2">
+        <div class="card-header-badges">
             <!-- Approval Status Badge -->
             <?php
             $approval_badges = [
@@ -856,22 +856,27 @@ if ($attachments->num_rows > 0):
                         <?php while ($h = $history->fetch_assoc()): ?>
                         <div class="timeline-item mb-3 pb-3" style="border-left: 2px solid #e0e0e0; padding-left: 20px; position: relative;">
                             <div style="position: absolute; left: -8px; top: 0; width: 14px; height: 14px; background: #667eea; border-radius: 50%;"></div>
-                            <div class="d-flex justify-content-between">
-                                <div>
+                            <div class="timeline-row">
+                                <div class="timeline-body">
                                     <strong><?php echo htmlspecialchars($h['full_name']); ?></strong>
                                     <?php if ($h['old_status'] && $h['new_status']): ?>
-                                        changed status from 
-                                        <span class="badge bg-secondary"><?php echo $h['old_status']; ?></span> to 
-                                        <span class="<?php echo getStatusBadge($h['new_status']); ?>"><?php echo $h['new_status']; ?></span>
+                                        <span class="d-inline"> changed status from</span>
+                                        <div class="status-chain">
+                                            <span class="badge bg-secondary"><?php echo $h['old_status']; ?></span>
+                                            <i class="bi bi-arrow-right" style="font-size:0.75rem;"></i>
+                                            <span class="<?php echo getStatusBadge($h['new_status']); ?>"><?php echo $h['new_status']; ?></span>
+                                        </div>
                                     <?php elseif ($h['new_status']): ?>
-                                        set status to 
-                                        <span class="<?php echo getStatusBadge($h['new_status']); ?>"><?php echo $h['new_status']; ?></span>
+                                        <span class="d-inline"> set status to</span>
+                                        <div class="status-chain">
+                                            <span class="<?php echo getStatusBadge($h['new_status']); ?>"><?php echo $h['new_status']; ?></span>
+                                        </div>
                                     <?php endif; ?>
                                 </div>
-                                <small class="text-muted"><?php echo formatDateTime($h['changed_date']); ?></small>
+                                <small class="timeline-date"><i class="bi bi-clock"></i> <?php echo formatDateTime($h['changed_date']); ?></small>
                             </div>
                             <?php if (!empty($h['comment'])): ?>
-                                <div class="mt-2 text-muted">
+                                <div class="mt-2 text-muted" style="font-size:0.88rem; word-break:break-word;">
                                     <i class="bi bi-chat-quote"></i> <?php echo htmlspecialchars($h['comment']); ?>
                                 </div>
                             <?php endif; ?>
@@ -899,26 +904,25 @@ if ($reassignment_history->num_rows > 0):
             <div class="timeline-item mb-3 pb-3" style="border-left: 2px solid #17a2b8; padding-left: 20px; position: relative;">
                 <div style="position: absolute; left: -8px; top: 0; width: 14px; height: 14px; background: #17a2b8; border-radius: 50%;"></div>
                 
-                <div class="d-flex justify-content-between mb-2">
-                    <div>
+                <div class="timeline-row mb-2">
+                    <div class="timeline-body">
                         <strong><?php echo htmlspecialchars($rh['reassigned_by_name']); ?></strong> 
                         <span class="text-muted">reassigned complaint</span>
                     </div>
-                    <small class="text-muted"><?php echo formatDateTime($rh['reassigned_at']); ?></small>
+                    <small class="timeline-date"><i class="bi bi-clock"></i> <?php echo formatDateTime($rh['reassigned_at']); ?></small>
                 </div>
                 
-                <div class="mb-2">
+                <div class="reassign-chain">
                     <?php if ($rh['old_admin_id']): ?>
                         <span class="badge bg-secondary">
                             <i class="bi bi-person-x"></i> <?php echo htmlspecialchars($rh['old_admin_name']); ?>
                         </span>
-                        <i class="bi bi-arrow-right mx-2"></i>
                     <?php else: ?>
                         <span class="badge bg-light text-dark">
                             <i class="bi bi-inbox"></i> Unassigned
                         </span>
-                        <i class="bi bi-arrow-right mx-2"></i>
                     <?php endif; ?>
+                    <i class="bi bi-arrow-right" style="font-size:0.75rem; color:#6c757d;"></i>
                     <span class="badge bg-info">
                         <i class="bi bi-person-check"></i> <?php echo htmlspecialchars($rh['new_admin_name']); ?>
                     </span>
@@ -953,8 +957,8 @@ if ($reassignment_history->num_rows > 0):
                                         <?php echo strtoupper(substr($comment['full_name'], 0, 1)); ?>
                                     </div>
                                     <div class="flex-grow-1">
-                                        <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <div>
+                                        <div class="comment-header">
+                                            <div class="comment-meta">
                                                 <strong><?php echo htmlspecialchars($comment['full_name']); ?></strong>
                                                 <?php if ($comment['role'] == 'admin'): ?>
                                                     <span class="badge bg-warning text-dark ms-1">
@@ -969,11 +973,11 @@ if ($reassignment_history->num_rows > 0):
                                                     <span class="badge bg-primary ms-1">You</span>
                                                 <?php endif; ?>
                                             </div>
-                                            <small class="text-muted">
+                                            <small class="comment-date">
                                                 <i class="bi bi-clock"></i> <?php echo formatDateTime($comment['created_at']); ?>
                                             </small>
                                         </div>
-                                        <p class="mb-0" style="white-space: pre-wrap;"><?php echo htmlspecialchars($comment['comment']); ?></p>
+                                        <p class="mb-0" style="white-space: pre-wrap; word-break: break-word;"><?php echo htmlspecialchars($comment['comment']); ?></p>
                                     </div>
                                 </div>
                             </div>
@@ -1052,22 +1056,22 @@ if ($reassignment_history->num_rows > 0):
 <div class="mb-3">
     <strong>User Satisfaction:</strong>
     <div class="mt-2">
-        <div style="color: #ffc107; font-size: 1.2rem;">
+        <div class="star-rating-wrap">
             <?php 
             for ($i = 1; $i <= 5; $i++) {
                 echo $i <= $complaint['user_rating'] 
-                    ? '<i class="bi bi-star-fill"></i>' 
-                    : '<i class="bi bi-star"></i>';
+                    ? '<i class="bi bi-star-fill" style="color:#ffc107; font-size:1.2rem;"></i>' 
+                    : '<i class="bi bi-star" style="color:#ffc107; font-size:1.2rem;"></i>';
             }
             ?>
-            <span class="ms-2" style="color: #333; font-size: 0.9rem;">
+            <span style="color: var(--text-primary, #333); font-size: 0.9rem; font-weight:600;">
                 <?php echo $complaint['user_rating']; ?>/5
             </span>
         </div>
         <?php if (!empty($complaint['user_feedback'])): ?>
             <div class="alert alert-light mt-2 mb-0">
                 <small><strong>User Feedback:</strong></small>
-                <p class="mb-0 mt-1" style="font-size: 0.9rem;">
+                <p class="mb-0 mt-1" style="font-size: 0.88rem; word-break: break-word;">
                     <?php echo nl2br(htmlspecialchars($complaint['user_feedback'])); ?>
                 </p>
             </div>
@@ -1338,16 +1342,18 @@ function createStatusIndicator() {
         position: fixed;
         bottom: 20px;
         right: 20px;
-        background: rgba(102, 126, 234, 0.95);
-        color: white;
-        padding: 12px 20px;
+        background: rgba(0, 194, 224, 0.95);
+        color: #0d1b2a;
+        padding: 10px 18px;
         border-radius: 25px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.25);
         display: none;
         align-items: center;
         gap: 10px;
         z-index: 1000;
-        font-size: 14px;
+        font-size: 13px;
+        font-weight: 600;
+        max-width: calc(100vw - 40px);
     `;
     indicator.innerHTML = '<i class="bi bi-arrow-repeat" style="animation: spin 1s linear infinite;"></i> Checking for updates...';
     document.body.appendChild(indicator);
@@ -1375,13 +1381,15 @@ function showToast(message, type = 'info') {
         position: fixed;
         top: 80px;
         right: 20px;
+        left: 20px;
         background: ${type === 'info' ? '#17a2b8' : '#28a745'};
         color: white;
-        padding: 15px 20px;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        padding: 14px 18px;
+        border-radius: 10px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.25);
         z-index: 10000;
-        min-width: 300px;
+        max-width: 420px;
+        margin-left: auto;
     `;
     toast.innerHTML = `
         <div style="display: flex; align-items: center; gap: 10px;">
