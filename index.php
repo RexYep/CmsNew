@@ -202,6 +202,41 @@ if (isset($_SESSION['user_id'])) {
         /* RESPONSIVE */
         @media(max-width:992px){.hero-visual{margin-top:60px;}.chip{display:none;}.stat-vdivider{display:none;}}
         @media(max-width:768px){.nav-links{display:none;flex-direction:column;padding:20px 0;background:rgba(13,27,42,.98);position:absolute;top:70px;left:0;right:0;border-bottom:1px solid var(--border);}.nav-links.open{display:flex;}.nav-toggler{display:block;}.step-wrap::before{display:none;}.ann-inner{flex-direction:column;align-items:flex-start;}}
+
+        /* MOBILE IMPROVEMENTS */
+@media (max-width: 768px) {
+
+    .stats-section {
+        padding: 50px 0;
+    }
+
+    .stat-item {
+        padding: 25px 10px;
+    }
+
+    .stat-num {
+        font-size: 2rem; /* smaller for mobile */
+    }
+
+    .stat-label {
+        font-size: 0.8rem;
+    }
+
+    /* Add spacing between rows */
+    .stats-section .col-6 {
+        margin-bottom: 20px;
+    }
+
+    /* Optional: horizontal divider instead of vertical on mobile */
+    .stat-item {
+        border-bottom: 1px solid var(--border);
+    }
+
+    /* Remove border from last two items */
+    .stats-section .col-6:nth-last-child(-n+2) .stat-item {
+        border-bottom: none;
+    }
+}
     </style>
 </head>
 <body>
