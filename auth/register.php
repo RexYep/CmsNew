@@ -356,6 +356,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             .auth-header h1 { font-size: 1.4rem; }
     
         }
+      
+@media (max-width: 576px) {
+
+    .input-wrap {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .form-control.has-toggle {
+        padding-right: 45px;
+    }
+
+    .pass-toggle {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    .strength-bar {
+        height: 4px;
+        margin-top: 10px;
+        width: 100%;
+    }
+
+    .pass-hint {
+        font-size: 0.75rem;
+        margin-top: 6px; 
+        margin-bottom: 18px;
+        line-height: 1.4;
+    }
+
+}
+
+@media (max-width: 576px) {
+
+    .strength-bar {
+        border-radius: 4px;
+    }
+
+    .strength-fill {
+        border-radius: 4px;
+    }
+
+    .pass-hint {
+        display: block;
+    }
+
+}
     </style>
 </head>
 <body>
