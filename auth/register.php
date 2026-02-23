@@ -406,6 +406,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
 }
+.input-wrap {
+    margin-bottom: 8px;
+}
+
+.strength-bar {
+    margin-top: 8px;
+    margin-bottom: 6px;
+}
+
+.pass-hint {
+    margin-top: 6px;  /* NEVER negative */
+    margin-bottom: 16px;
+}
     </style>
 </head>
 <body>
