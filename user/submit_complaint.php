@@ -210,7 +210,7 @@ include '../includes/navbar.php';
                     <div class="mb-3">
                         <label for="category_id" class="form-label">Category <span class="text-danger">*</span></label>
                         <select class="form-select" id="category_id" name="category_id" required <?php echo !$can_submit ? 'disabled' : ''; ?>>
-                            <option value="">-- Select Category --</option>
+                            <option value="">Select Category</option>
                             <?php foreach ($categories as $category): ?>
                                 <option value="<?php echo $category['category_id']; ?>"
                                     <?php echo (isset($_POST['category_id']) && $_POST['category_id'] == $category['category_id']) ? 'selected' : ''; ?>>

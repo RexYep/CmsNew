@@ -841,8 +841,8 @@ if ($reopen_requests->num_rows > 0):
                 <?php if ($history->num_rows > 0): ?>
                     <div class="timeline">
                         <?php while ($h = $history->fetch_assoc()): ?>
-                        <div class="timeline-item mb-3 pb-3" style="border-left: 2px solid #e0e0e0; padding-left: 20px; position: relative;">
-                            <div style="position: absolute; left: -8px; top: 0; width: 14px; height: 14px; background: #667eea; border-radius: 50%;"></div>
+                        <div class="timeline-item mb-3 pb-3" style="border-left: 2px solid var(--border-color);padding-left: 20px; position: relative;">
+                            <div style="position: absolute; left: -8px; top: 0; width: 14px; height: 14px; background: #00c2e0;border-radius: 50%;"></div>
                             <div class="timeline-row">
                                 <div class="timeline-body">
                                     <strong><?php echo htmlspecialchars($h['full_name']); ?></strong>
@@ -886,9 +886,9 @@ if ($reopen_requests->num_rows > 0):
                 <?php if ($comments->num_rows > 0): ?>
                     <div class="mb-4">
                         <?php while ($comment = $comments->fetch_assoc()): ?>
-                            <div class="comment-item mb-3 p-3" style="background: <?php echo $comment['role'] == 'admin' ? '#fff3cd' : '#e3f2fd'; ?>; border-radius: 8px; border-left: 4px solid <?php echo $comment['role'] == 'admin' ? '#ffc107' : '#667eea'; ?>;">
+                            <div class="comment-item mb-3 p-3" style="background: <?php echo $comment['role'] == 'admin' ? 'rgba(255, 193, 7, 0.12)' : 'rgba(0, 194, 224, 0.08)'; ?>; border-radius: 8px; border-left: 4px solid <?php echo $comment['role'] == 'admin' ? '#ffc107' : '#00c2e0'; ?>;">
                                 <div class="d-flex align-items-start">
-                                    <div class="user-avatar me-2" style="width: 40px; height: 40px; font-size: 1rem; background: <?php echo $comment['role'] == 'admin' ? 'linear-gradient(135deg, #ffc107 0%, #ff9800 100%)' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'; ?>; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                                    <div class="user-avatar me-2" style="width: 40px; height: 40px; font-size: 1rem; background: <?php echo $comment['role'] == 'admin' ? 'linear-gradient(135deg, #ffc107 0%, #ff9800 100%)' : 'linear-gradient(135deg, #00c2e0 0%, #0a3a4a 100%)'; ?>; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
                                         <?php echo strtoupper(substr($comment['full_name'], 0, 1)); ?>
                                     </div>
                                     <div class="flex-grow-1">
@@ -917,7 +917,7 @@ if ($reopen_requests->num_rows > 0):
                     </div>
                 <?php else: ?>
                     <div class="text-center py-3 mb-4">
-                        <i class="bi bi-chat-left-text" style="font-size: 3rem; color: #ddd;"></i>
+                        <i class="bi bi-chat-left-text" style="font-size: 3rem; color: var(--text-secondary);"></i>
                         <p class="text-muted mb-0">No comments yet. Start the conversation!</p>
                     </div>
                 <?php endif; ?>
@@ -1170,7 +1170,7 @@ function createStatusIndicator() {
         position: fixed;
         bottom: 20px;
         right: 20px;
-        background: rgba(102, 126, 234, 0.95);
+        background: rgba(0, 194, 224, 0.95);
         color: white;
         padding: 12px 20px;
         border-radius: 25px;
@@ -1341,7 +1341,7 @@ function showCommentReadNotification(newCount) {
         position: fixed;
         bottom: 20px;
         right: 20px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #00c2e0 0%, #0a3a4a 100%);
         color: white;
         padding: 12px 20px;
         border-radius: 8px;

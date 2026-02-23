@@ -941,8 +941,8 @@ a:hover {
 
 /* Dark mode specific badge adjustments */
 [data-theme="dark"] .badge.bg-light {
-  background: #4a5568 !important;
-  color: #e9ecef !important;
+  background: #1a2f48 !important; /* navy-3 */
+  color: #e0f4ff !important;
 }
 
 /* ========== ALERT STYLES ========== */
@@ -1822,7 +1822,7 @@ td .d-flex.gap-2 {
 /* NEW comment badge gradient */
 .badge-new {
   background: linear-gradient(135deg, #00c2e0 0%, #0a3a4a 100%) !important;
-  box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+  box-shadow: 0 0 10px rgba(0, 194, 224, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
@@ -1838,11 +1838,11 @@ td .d-flex.gap-2 {
   0%,
   100% {
     transform: scale(1);
-    box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+    box-shadow: 0 0 10px rgba(0, 194, 224, 0.5);
   }
   50% {
     transform: scale(1.08);
-    box-shadow: 0 0 15px rgba(102, 126, 234, 0.8);
+    box-shadow: 0 0 15px rgba(0, 194, 224, 0.8);
   }
 }
 
@@ -1928,12 +1928,12 @@ td .d-flex.gap-2 {
 [data-theme="dark"] .badge.bg-white {
   background-color: #4a5568 !important;
   color: #f8f9fa !important; /* Light text */
-  border: 1px solid #6b7280;
+  border: 1px solid rgba(0, 194, 224, 0.2);
 }
 
 [data-theme="dark"] .badge.bg-warning {
   background-color: #fbbf24 !important;
-  color: #1f2937 !important; /* Dark text for yellow bg */
+  color: #0d1b2a !important; /* navy dark text on yellow */
 }
 
 [data-theme="dark"] .badge.text-dark {
@@ -1963,9 +1963,9 @@ td .d-flex.gap-2 {
 
 /* ========== FIX 3: Card Headers ========== */
 
-/* Light mode card headers */
+/* Light mode card headers — gradient bg needs white text */
 .card-header {
-  color: #212529 !important;
+  color: #ffffff !important;
 }
 
 .card-header.bg-light {
@@ -1991,13 +1991,13 @@ td .d-flex.gap-2 {
 }
 
 [data-theme="dark"] .card-header.bg-light {
-  background-color: #374151 !important;
-  color: #f8f9fa !important;
+  background-color: #1a2f48 !important; /* navy-3 */
+  color: #e0f4ff !important;
 }
 
 [data-theme="dark"] .card-header.bg-warning {
   background-color: #fbbf24 !important;
-  color: #1f2937 !important;
+  color: #0d1b2a !important; /* navy dark text on yellow */
 }
 
 /* ========== FIX 4: Text Utilities ========== */
@@ -2017,7 +2017,7 @@ td .d-flex.gap-2 {
 
 /* Dark mode text colors */
 [data-theme="dark"] .text-muted {
-  color: #9ca3af !important;
+  color: #8fa3b8 !important; /* matches index.php --muted */
 }
 
 [data-theme="dark"] .text-dark {
@@ -2027,7 +2027,10 @@ td .d-flex.gap-2 {
 [data-theme="dark"] .text-white {
   color: #f8f9fa !important;
 }
-
+.card-header .text-muted,
+.card-header small {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
 /* ========== FIX 5: Form Elements ========== */
 
 /* Light mode forms */
@@ -2056,20 +2059,20 @@ td .d-flex.gap-2 {
 /* Dark mode forms */
 [data-theme="dark"] .form-control,
 [data-theme="dark"] .form-select {
-  background-color: #374151 !important;
-  color: #f8f9fa !important;
-  border: 1px solid #4b5563;
+  background-color: #132236 !important; /* navy-2 */
+  color: #e0f4ff !important;
+  border: 1px solid rgba(0, 194, 224, 0.25);
 }
 
 [data-theme="dark"] .form-control:focus,
 [data-theme="dark"] .form-select:focus {
-  background-color: #374151 !important;
-  color: #f8f9fa !important;
-  border-color: #6b7280;
+  background-color: #132236 !important; /* navy-2 */
+  color: #e0f4ff !important;
+  border-color: #00c2e0;
 }
 
 [data-theme="dark"] .form-control::placeholder {
-  color: #9ca3af !important;
+  color: #8fa3b8 !important; /* matches index.php muted */
   opacity: 0.8;
 }
 
@@ -2101,8 +2104,8 @@ td .d-flex.gap-2 {
 
 /* Dark mode dropdowns */
 [data-theme="dark"] .dropdown-menu {
-  background-color: #1f2937;
-  border: 1px solid #374151;
+  background-color: #1a2f48; /* navy-3 */
+  border: 1px solid rgba(0, 194, 224, 0.15);
 }
 
 [data-theme="dark"] .dropdown-item {
@@ -2110,13 +2113,13 @@ td .d-flex.gap-2 {
 }
 
 [data-theme="dark"] .dropdown-item:hover {
-  background-color: #374151;
-  color: #f8f9fa !important;
+  background-color: #1e3a55; /* navy accent */
+  color: #e0f4ff !important;
 }
 
 [data-theme="dark"] .dropdown-item.bg-light {
-  background-color: #374151 !important;
-  color: #f8f9fa !important;
+  background-color: #1e3a55 !important;
+  color: #e0f4ff !important;
 }
 
 /* ========== FIX 7: Notification Dropdown Specific ========== */
@@ -2139,7 +2142,7 @@ td .d-flex.gap-2 {
 }
 
 [data-theme="dark"] .notification-dropdown .dropdown-item:hover {
-  background-color: #374151;
+  background-color: #1e3a55;
 }
 
 [data-theme="dark"] .notification-dropdown .dropdown-item small {
@@ -2175,22 +2178,22 @@ td .d-flex.gap-2 {
 
 /* Dark mode alerts - keep existing vars but ensure text is visible */
 [data-theme="dark"] .alert-success {
-  background-color: #1e4620 !important;
+  background-color: rgba(40, 167, 69, 0.12) !important;
   color: #86efac !important;
 }
 
 [data-theme="dark"] .alert-danger {
-  background-color: #4a1c1c !important;
+  background-color: rgba(220, 53, 69, 0.12) !important;
   color: #fca5a5 !important;
 }
 
 [data-theme="dark"] .alert-warning {
-  background-color: #4a3d1c !important;
-  color: #fde047 !important;
+  background-color: rgba(255, 193, 7, 0.1) !important;
+  color: #fde68a !important;
 }
 
 [data-theme="dark"] .alert-info {
-  background-color: #1c3d4a !important;
+  background-color: rgba(0, 194, 224, 0.1) !important;
   color: #7ee8f8 !important;
 }
 
@@ -2236,7 +2239,7 @@ td .d-flex.gap-2 {
 
 .sidebar-menu a:hover,
 .sidebar-menu a.active {
-  color: #ffffff !important;
+  color: #00c2e0 !important;
 }
 
 .sidebar-menu a i {
@@ -2283,22 +2286,22 @@ td .d-flex.gap-2 {
 
 /* ========== FIX 13: Links ========== */
 
-/* Light mode links */
+/* Light mode links — cyan theme */
 a {
-  color: #0d6efd;
+  color: #007a8c; /* darker cyan readable on white */
 }
 
 a:hover {
-  color: #0a58ca;
+  color: #00c2e0;
 }
 
-/* Dark mode links */
+/* Dark mode links — cyan theme */
 [data-theme="dark"] a:not(.btn) {
-  color: #60a5fa !important;
+  color: #00c2e0 !important;
 }
 
 [data-theme="dark"] a:not(.btn):hover {
-  color: #93c5fd !important;
+  color: #00e5ff !important;
 }
 
 /* ========== FIX 14: Input Group Text ========== */
@@ -2310,9 +2313,9 @@ a:hover {
 }
 
 [data-theme="dark"] .input-group-text {
-  background-color: #374151;
-  color: #f8f9fa !important;
-  border: 1px solid #4b5563;
+  background-color: #132236; /* navy-2 */
+  color: #e0f4ff !important;
+  border: 1px solid rgba(0, 194, 224, 0.25);
 }
 
 /* ========== FIX 15: List Group Items ========== */
@@ -2328,13 +2331,13 @@ a:hover {
 }
 
 [data-theme="dark"] .list-group-item {
-  background-color: #2d3748;
-  color: #f8f9fa !important;
-  border: 1px solid #4a5568;
+  background-color: #1a2f48; /* navy-3 */
+  color: #e0f4ff !important;
+  border: 1px solid rgba(0, 194, 224, 0.15);
 }
 
 [data-theme="dark"] .list-group-item:hover {
-  background-color: #374151;
+  background-color: #1e3a55;
 }
 
 /* ========== FIX 16: Breadcrumbs ========== */
@@ -2369,9 +2372,9 @@ a:hover {
 }
 
 [data-theme="dark"] .pagination .page-link {
-  background-color: #2d3748;
-  color: #f8f9fa !important;
-  border: 1px solid #4a5568;
+  background-color: #1a2f48; /* navy-3 */
+  color: #e0f4ff !important;
+  border: 1px solid rgba(0, 194, 224, 0.15);
 }
 
 [data-theme="dark"] .pagination .page-item.active .page-link {
@@ -2421,13 +2424,13 @@ pre {
 }
 
 [data-theme="dark"] code {
-  background-color: #374151;
-  color: #f472b6;
+  background-color: #132236; /* navy-2 */
+  color: #7ee8f8; /* cyan-tinted */
 }
 
 [data-theme="dark"] pre {
-  background-color: #1f2937;
-  color: #f8f9fa;
+  background-color: #0d1b2a; /* navy */
+  color: #e0f4ff;
 }
 
 /* END READABILITY FIXES */
@@ -2787,7 +2790,6 @@ pre {
   }
 }
 
-/* ========== FIX 12: Complaint Details Mobile ========== */
 @media (max-width: 768px) {
   /* Stack the two-column layout vertically */
   .col-lg-8,
@@ -2828,10 +2830,6 @@ pre {
     left: auto !important;
   }
 }
-/* ============================================
-   ADDITIONAL MOBILE NAVBAR FIXES
-   Add to the BOTTOM of style.css
-   ============================================ */
 
 /* Mobile menu button styling */
 .mobile-menu-btn {
@@ -3258,7 +3256,7 @@ pre {
 
 /* Current Month - always readable */
 .current-month {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #00c2e0 0%, #0a3a4a 100%);
   color: #ffffff;
 }
 
@@ -3277,4 +3275,21 @@ pre {
   background-color: #fbbf24 !important;
   color: #111827 !important;
   font-weight: 600;
+}
+
+[data-theme="dark"] .alert-light {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .badge.bg-dark {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  color: #e0f4ff !important;
+}
+
+[data-theme="dark"] .alert-primary {
+  background-color: rgba(0, 194, 224, 0.1) !important;
+  color: #7ee8f8 !important;
+  border-color: rgba(0, 194, 224, 0.3) !important;
 }

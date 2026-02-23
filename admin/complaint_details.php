@@ -1145,7 +1145,7 @@ if ($reassignment_history->num_rows > 0):
                         <?php echo $is_reassignment ? 'Reassign to Admin' : 'Assign to Admin'; ?>
                     </label>
                     <select class="form-select" id="assigned_to" name="assigned_to" required>
-                        <option value="">-- Select Admin --</option>
+                        <option value="">Select Admin</option>
                         <?php 
                         // Reset the result pointer
                         $admins->data_seek(0);
