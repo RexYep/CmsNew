@@ -111,16 +111,16 @@ include '../includes/navbar.php';
         <select class="form-select" id="approval_status" name="approval_status">
             <option value="">All</option>
             <option value="pending_review" <?php echo $approval_filter == 'pending_review' ? 'selected' : ''; ?>>
-                ⏳ Pending Review
+                Pending Review
             </option>
             <option value="approved" <?php echo $approval_filter == 'approved' ? 'selected' : ''; ?>>
-                ✅ Approved
+                Approved
             </option>
             <option value="changes_requested" <?php echo $approval_filter == 'changes_requested' ? 'selected' : ''; ?>>
-                📝 Changes Requested
+                Changes Requested
             </option>
             <option value="rejected" <?php echo $approval_filter == 'rejected' ? 'selected' : ''; ?>>
-                ❌ Rejected
+                Rejected
             </option>
         </select>
     </div>

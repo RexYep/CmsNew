@@ -49,7 +49,7 @@ if (!empty($current_user['avatar_url'])) {
             style="width: 80px; height: 80px; object-fit: cover; border-radius: 50%; margin-bottom: 10px; border: 3px solid rgba(255,255,255,0.3);">
         
         <!-- System Name -->
-        <div><?php echo $is_admin ? '' : ''; ?></div>
+        <div><?php echo $is_admin ? 'Barangay San Cristobal' : 'Barangay San Cristobal'; ?></div>
         
           <!-- Subtitle -->
         <small class="d-block mt-1" style="font-size: 0.75rem; opacity: 0.8;">

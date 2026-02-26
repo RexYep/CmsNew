@@ -480,8 +480,6 @@ $stmt->bind_param("i", $complaint_id);
 $stmt->execute();
 $history = $stmt->get_result();
 
-// Get all admins for assignment dropdown
-// If Super Admin: show all admins
 // If Regular Admin: show only regular admins (not super admins)
 if (isSuperAdmin()) {
     $admins = $conn->query("SELECT user_id, full_name, admin_level FROM users WHERE role = 'admin' AND status = 'active' ORDER BY full_name ASC");
@@ -637,16 +635,6 @@ include '../includes/navbar.php';
                 </div>
 
              <?php
-/**
- * ATTACHMENT DISPLAY SNIPPET
- * Works for both LOCAL files and CLOUDINARY URLs
- *
- * Paste this in:
- * - user/complaint_details.php
- * - admin/complaint_details.php
- *
- * Replace the existing attachment display section
- */
 
 // Fetch attachments
 $stmt_attachments = $conn->prepare("SELECT * FROM complaint_attachments WHERE complaint_id = ? ORDER BY uploaded_date ASC");
