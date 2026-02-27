@@ -237,6 +237,29 @@ if (isset($_SESSION['user_id'])) {
         border-bottom: none;
     }
 }
+/* PROFESSIONAL SECTION HIGHLIGHT */
+.section-highlight {
+    position: relative;
+    background: linear-gradient(
+        180deg,
+        rgba(0,194,224,0.04) 0%,
+        rgba(0,194,224,0.02) 100%
+    );
+    border-top: 1px solid rgba(0,194,224,0.18);
+    border-bottom: 1px solid rgba(0,194,224,0.18);
+}
+
+.section-highlight::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 50%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    opacity: .6;
+}
     </style>
 </head>
 <body>
@@ -345,7 +368,7 @@ if (isset($_SESSION['user_id'])) {
 </div>
 
 <!-- SERVICES -->
-<section class="services-section" id="services">
+<section class="services-section section-highlight" id="services">
     <div class="container">
         <div class="text-center mb-5">
             <span class="section-eyebrow reveal">What We Offer</span>
@@ -413,7 +436,7 @@ if (isset($_SESSION['user_id'])) {
 </section>
 
 <!-- YOUR RIGHTS -->
-<section class="rights-section" id="your-rights">
+<section class="rights-section section-highlight" id="your-rights">
     <div class="container">
         <div class="text-center mb-5">
             <span class="section-eyebrow reveal">Know Your Rights</span>

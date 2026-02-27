@@ -6,6 +6,8 @@
 
 require_once '../config/config.php';
 require_once '../includes/functions.php';
+require_once '../includes/security_helper.php';
+require_once '../includes/recaptcha_helper.php';
 
 if (isLoggedIn()) {
     header("Location: " . (isAdmin() ? '../admin/index.php' : '../user/index.php'));
@@ -16,21 +18,39 @@ $error   = '';
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $full_name        = sanitizeInput($_POST['full_name']);
-    $email            = sanitizeInput($_POST['email']);
-    $phone            = sanitizeInput($_POST['phone']);
-    $password         = $_POST['password'];
-    $confirm_password = $_POST['confirm_password'];
-
-    if ($password !== $confirm_password) {
-        $error = 'Passwords do not match.';
+    // Validate honeypot, CSRF, and rate limiting
+    $validation = validateFormProtection('register', 3, 300); // 3 attempts per 5 minutes
+    
+    if (!$validation['valid']) {
+        $error = implode('<br>', $validation['errors']);
     } else {
-        $result = registerUser($full_name, $email, $phone, $password);
-        if ($result['success']) {
-            $success   = 'Registration successful! Your account is pending approval. You will receive an email once your account is approved by an administrator.';
-            $full_name = $email = $phone = '';
-        } else {
-            $error = $result['message'];
+        
+        if (isRecaptchaConfigured()) {
+            $recaptcha = validateRecaptchaFromPost(0.6); // Score threshold: 0.6 (stricter)
+            if (!$recaptcha['success']) {
+                $error = $recaptcha['message'];
+            }
+        }
+        
+        // If all validations passed, proceed with registration
+        if (empty($error)) {
+            $full_name        = sanitizeInput($_POST['full_name']);
+            $email            = sanitizeInput($_POST['email']);
+            $phone            = sanitizeInput($_POST['phone']);
+            $password         = $_POST['password'];
+            $confirm_password = $_POST['confirm_password'];
+
+            if ($password !== $confirm_password) {
+                $error = 'Passwords do not match.';
+            } else {
+                $result = registerUser($full_name, $email, $phone, $password);
+                if ($result['success']) {
+                    $success   = 'Registration successful! Your account is pending approval. You will receive an email once your account is approved by an administrator.';
+                    $full_name = $email = $phone = '';
+                } else {
+                    $error = $result['message'];
+                }
+            }
         }
     }
 }
@@ -44,6 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <?php echo loadRecaptchaScript(); ?>
     <style>
         :root {
             --navy:   #0d1b2a;
@@ -460,7 +481,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <?php else: ?>
         <!-- Form (hide after success) -->
-        <form method="POST" action="" id="registerForm">
+      <form method="POST" action="" id="registerForm" data-recaptcha="register">
+        <?php formProtection(); ?>
             <!-- Full Name -->
             <label class="form-label">Full Name <span style="color:#f72585;">*</span></label>
             <div class="input-wrap">
@@ -520,6 +542,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <button type="submit" class="btn-submit">
                 <i class="bi bi-person-plus-fill"></i> Create Account
             </button>
+            <?php if (isRecaptchaConfigured()) echo displayRecaptchaBadge(); ?>
         </form>
 
         <div class="pending-info">

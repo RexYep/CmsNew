@@ -6,6 +6,8 @@
 
 require_once '../config/config.php';
 require_once '../includes/functions.php';
+require_once '../includes/security_helper.php';
+require_once '../includes/recaptcha_helper.php';
 
 if (isLoggedIn()) {
     if (isAdmin()) {
@@ -24,16 +26,36 @@ if (isset($_GET['deleted']) && $_GET['deleted'] == 1) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email    = sanitizeInput($_POST['email']);
-    $password = $_POST['password'];
-    $result   = loginUser($email, $password);
-
-    if ($result['success']) {
-        header("Location: " . ($result['role'] === ROLE_ADMIN ? '../admin/index.php' : '../user/index.php'));
-        exit();
+    // ========== SPAM PROTECTION START ==========
+    // Validate honeypot, CSRF, and rate limiting
+    $validation = validateFormProtection('login', 5, 60); // 5 attempts per 60 seconds
+    
+    if (!$validation['valid']) {
+        $error = implode('<br>', $validation['errors']);
     } else {
-        $error = $result['message'];
+        // Validate reCAPTCHA (if configured)
+        if (isRecaptchaConfigured()) {
+            $recaptcha = validateRecaptchaFromPost(0.5); // Score threshold: 0.5
+            if (!$recaptcha['success']) {
+                $error = $recaptcha['message'];
+            }
+        }
+        
+        // If all validations passed, proceed with login
+        if (empty($error)) {
+            $email    = sanitizeInput($_POST['email']);
+            $password = $_POST['password'];
+            $result   = loginUser($email, $password);
+
+            if ($result['success']) {
+                header("Location: " . ($result['role'] === ROLE_ADMIN ? '../admin/index.php' : '../user/index.php'));
+                exit();
+            } else {
+                $error = $result['message'];
+            }
+        }
     }
+    // ========== SPAM PROTECTION END ==========
 }
 ?>
 <!DOCTYPE html>
@@ -45,6 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <?php echo loadRecaptchaScript(); ?>
     <style>
         :root {
             --navy:   #0d1b2a;
@@ -394,6 +417,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             .auth-card { padding: 32px 24px; border-radius: 20px; }
             .auth-header h1 { font-size: 1.4rem; }
         }
+
+
     </style>
 </head>
 <body>
@@ -441,7 +466,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
 
         <!-- Form -->
-        <form method="POST" action="">
+    <form method="POST" action="" data-recaptcha="login">
+         <?php formProtection(); ?>  <!-- ← NEW: Honeypot + CSRF -->
             <!-- Email -->
             <label class="form-label">Email Address</label>
             <div class="input-wrap">
@@ -474,6 +500,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <button type="submit" class="btn-submit">
                 <i class="bi bi-box-arrow-in-right"></i> Login
             </button>
+            <?php if (isRecaptchaConfigured()) echo displayRecaptchaBadge(); ?>
         </form>
 
         <div class="auth-divider"><span>or</span></div>

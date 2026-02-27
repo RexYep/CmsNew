@@ -273,7 +273,9 @@ function validateFormProtection($action, $rate_limit = 3, $time_window = 60) {
     ];
 }
 
-
+/**
+ * Display security error message
+ */
 function showSecurityError($errors) {
     if (is_array($errors)) {
         foreach ($errors as $error) {
