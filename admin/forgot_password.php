@@ -25,9 +25,9 @@ $otp_verified = false;
 
 // Step 1 — Send OTP
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_otp'])) {
-    
+
     // Validate protections
-    $validation = validateFormProtection('forgot_password', 1, 60); // 3 per 5 min
+    $validation = validateFormProtection('forgot_password', 3, 60); // 3 per 5 min
     if (!$validation['valid']) {
         $error = implode('<br>', $validation['errors']);
     } elseif (isRecaptchaConfigured()) {
@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_otp'])) {
         }
     } elseif (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
         $error = 'Invalid request. Please try again.';
-   } else {
+    } else {
         $email = sanitizeInput($_POST['email']);
 
         // Pre-check — block user emails from admin forgot password page
@@ -119,7 +119,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password'])) {
 }
 
 // Restore step from session
-if (isset($_SESSION['reset_email']) && !isset($_POST['send_otp'])) $step = 2;
+if (isset($_SESSION['reset_email']) && !isset($_POST['send_otp'])) {
+    $step = 2;
+}
 if (isset($_SESSION['otp_verified']) && $_SESSION['otp_verified'] === true && isset($_SESSION['reset_token'])) {
     $step         = 3;
     $otp_verified = true;
@@ -504,7 +506,9 @@ if (isset($_SESSION['reset_started_at']) && (time() - $_SESSION['reset_started_a
             <button type="submit" name="send_otp" class="btn-submit">
                 <i class="bi bi-send-fill"></i> Send OTP Code
             </button>
-            <?php if (isRecaptchaConfigured()) echo displayRecaptchaBadge(); ?>
+            <?php if (isRecaptchaConfigured()) {
+                echo displayRecaptchaBadge();
+            } ?>
         </form>
 
         <!-- STEP 2: OTP -->

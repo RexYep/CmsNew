@@ -17,23 +17,23 @@ $success = '';
 // Handle user status toggle
 if (isset($_GET['toggle_status']) && isset($_GET['user_id'])) {
     $user_id = (int)$_GET['user_id'];
-    
+
     // Get user info
     $stmt = $conn->prepare("SELECT role, status FROM users WHERE user_id = ?");
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
     $target_user = $stmt->get_result()->fetch_assoc();
-    
+
     // Permission check: Regular admin cannot toggle admin status
     if (!isSuperAdmin() && $target_user['role'] == 'admin') {
         $error = 'You do not have permission to change admin user status. Only Super Admins can do this.';
     } else {
         // Toggle status
         $new_status = ($target_user['status'] == 'active') ? 'inactive' : 'active';
-        
+
         $stmt = $conn->prepare("UPDATE users SET status = ? WHERE user_id = ?");
         $stmt->bind_param("si", $new_status, $user_id);
-        
+
         if ($stmt->execute()) {
             $success = "User status updated successfully!";
         } else {
@@ -45,16 +45,16 @@ if (isset($_GET['toggle_status']) && isset($_GET['user_id'])) {
 // Handle user deletion
 if (isset($_GET['delete_user']) && isset($_GET['user_id'])) {
     $user_id = (int)$_GET['user_id'];
-    
+
     // Only Super Admin can delete users
     if (!isSuperAdmin()) {
         $error = 'Only Super Admins can delete users. Regular Admins cannot delete accounts.';
-    } else if ($user_id == $_SESSION['user_id']) {
+    } elseif ($user_id == $_SESSION['user_id']) {
         $error = "You cannot delete your own account!";
     } else {
         $stmt = $conn->prepare("DELETE FROM users WHERE user_id = ?");
         $stmt->bind_param("i", $user_id);
-        
+
         if ($stmt->execute()) {
             $success = "User deleted successfully!";
         } else {
@@ -93,7 +93,7 @@ if (!empty($search_query)) {
     $types .= "ss";
 }
 
-$where_clause = "WHERE " . implode(" AND ", $where_conditions); 
+$where_clause = "WHERE " . implode(" AND ", $where_conditions);
 
 // Fetch users
 $query = "SELECT * FROM users $where_clause ORDER BY created_at DESC";
@@ -209,6 +209,7 @@ include '../includes/navbar.php';
                                    <?php if ($role_filter == 'user' || empty($role_filter)): ?>
     <th>Today's Submissions</th>
 <?php endif; ?>
+
                                     <th>Role</th>
                                     <th>Status</th>
                                     <th>Joined</th>
@@ -217,15 +218,15 @@ include '../includes/navbar.php';
                             </thead>
                             <tbody>
                                 <?php while ($user = $users->fetch_assoc()): ?>
-                                <?php 
+                                <?php
                                 // Check if current admin can manage this user
                                 $can_toggle_status = true;
-                                $can_delete = isSuperAdmin(); // Only super admin can delete
-                                
-                                if (!isSuperAdmin() && $user['role'] == 'admin') {
-                                    $can_toggle_status = false;
-                                }
-                                ?>
+                                    $can_delete = isSuperAdmin(); // Only super admin can delete
+
+                                    if (!isSuperAdmin() && $user['role'] == 'admin') {
+                                        $can_toggle_status = false;
+                                    }
+                                    ?>
                                 <tr>
                                     <td><strong>#<?php echo $user['user_id']; ?></strong></td>
                                     <td>
@@ -250,7 +251,7 @@ include '../includes/navbar.php';
                                    <?php if ($role_filter == 'user' || empty($role_filter)): ?>
     <td>
         <?php if ($user['role'] == 'user'): ?>
-            <?php 
+            <?php
             $today_count = getTodayComplaintsCount($user['user_id']);
             ?>
             <span class="badge <?php echo $today_count >= DAILY_COMPLAINT_LIMIT ? 'bg-danger' : 'bg-success'; ?>">

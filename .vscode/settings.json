@@ -2,7 +2,7 @@
   "editor.formatOnSave": true,
 
   "[php]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
+    "editor.defaultFormatter": "junstyle.php-cs-fixer"
   },
 
   "[html]": {

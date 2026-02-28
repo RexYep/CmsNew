@@ -157,7 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bind_param("ii", $complaint_id, $user_id);
             $stmt->execute();
             
-        // Notify ONLY super admins about new complaint (regular admins get notified when assigned)
+        // Notify only super admins about new complaint (regular admins get notified when assigned)
 $super_admins = $conn->query("SELECT user_id FROM users WHERE role = 'admin' AND admin_level = 'super_admin' AND status = 'active'");
 while ($admin = $super_admins->fetch_assoc()) {
     $notif_title = "New Complaint Submitted";

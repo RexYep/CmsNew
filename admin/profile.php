@@ -23,11 +23,11 @@ $user = getUserById($user_id);
 
 // Handle profile picture upload with CLOUDINARY
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_picture'])) {
-    
+
     // ========== SPAM PROTECTION START ==========
     // Validate honeypot, CSRF, and rate limiting
     $validation = validateFormProtection('profile_upload', 3, 60); // 3 attempts per minute
-    
+
     if (!$validation['valid']) {
         $error = implode('<br>', $validation['errors']);
     } else {
@@ -38,48 +38,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_picture'])) {
                 $error = $recaptcha['message'];
             }
         }
-        
+
         // If validation passed, proceed with upload
         if (empty($error)) {
             // ========== SPAM PROTECTION END ==========
-            
+
             if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === 0) {
 
                 $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
                 if (!in_array($_FILES['profile_picture']['type'], $allowed_types)) {
                     $error = 'Only JPG, PNG, and GIF images are allowed';
                 } elseif ($_FILES['profile_picture']['size'] > 2 * 1024 * 1024) {
-            $error = 'Avatar size must not exceed 2MB';
-        } else {
-            // Delete old avatar from Cloudinary if exists
-            if (!empty($user['avatar_public_id'])) {
-                deleteFromCloudinary($user['avatar_public_id'], 'image');
-            }
-
-            // Upload new avatar to Cloudinary
-            $upload_result = uploadToCloudinary($_FILES['profile_picture'], 'avatars');
-
-            if ($upload_result['success']) {
-                $avatar_url = $upload_result['url'];
-                $avatar_public_id = $upload_result['public_id'];
-
-                $stmt = $conn->prepare("UPDATE users SET profile_picture = NULL, avatar_url = ?, avatar_public_id = ? WHERE user_id = ?");
-                $stmt->bind_param("ssi", $avatar_url, $avatar_public_id, $user_id);
-
-                if ($stmt->execute()) {
-                    $success = 'Profile picture updated successfully!';
-                    $_SESSION['avatar_url'] = $avatar_url;
-                    $user = getUserById($user_id);
+                    $error = 'Avatar size must not exceed 2MB';
                 } else {
-                    $error = 'Database error: ' . $stmt->error;
+                    // Delete old avatar from Cloudinary if exists
+                    if (!empty($user['avatar_public_id'])) {
+                        deleteFromCloudinary($user['avatar_public_id'], 'image');
+                    }
+
+                    // Upload new avatar to Cloudinary
+                    $upload_result = uploadToCloudinary($_FILES['profile_picture'], 'avatars');
+
+                    if ($upload_result['success']) {
+                        $avatar_url = $upload_result['url'];
+                        $avatar_public_id = $upload_result['public_id'];
+
+                        $stmt = $conn->prepare("UPDATE users SET profile_picture = NULL, avatar_url = ?, avatar_public_id = ? WHERE user_id = ?");
+                        $stmt->bind_param("ssi", $avatar_url, $avatar_public_id, $user_id);
+
+                        if ($stmt->execute()) {
+                            $success = 'Profile picture updated successfully!';
+                            $_SESSION['avatar_url'] = $avatar_url;
+                            $user = getUserById($user_id);
+                        } else {
+                            $error = 'Database error: ' . $stmt->error;
+                        }
+                    } else {
+                        $error = 'Upload failed: ' . $upload_result['error'];
+                    }
                 }
             } else {
-                $error = 'Upload failed: ' . $upload_result['error'];
+                $error = 'Please select a file to upload';
             }
-     }
-    } else {
-        $error = 'Please select a file to upload';
-    }
         } // End empty($error) check
     } // End validation check
 }
@@ -143,7 +143,7 @@ $resolved_complaints = $conn->query("SELECT COUNT(*) as total FROM complaints WH
 
 // Determine avatar display
 if (!empty($user['avatar_url'])) {
-   $avatar_display = $user['avatar_url'];
+    $avatar_display = $user['avatar_url'];
     $has_avatar = true;
 } elseif (!empty($user['profile_picture']) && file_exists('../' . $user['profile_picture'])) {
     $avatar_display = SITE_URL . $user['profile_picture'];
@@ -157,7 +157,9 @@ include '../includes/header.php';
 include '../includes/navbar.php';
 ?>
 
-<?php if (function_exists('loadRecaptchaScript')) echo loadRecaptchaScript(); ?>
+<?php if (function_exists('loadRecaptchaScript')) {
+    echo loadRecaptchaScript();
+} ?>
 
 <div class="row">
     <div class="col-lg-8">
@@ -396,12 +398,15 @@ include '../includes/navbar.php';
                     <button type="submit" name="upload_picture" class="btn btn-primary">
                         <i class="bi bi-upload"></i> Upload
                     </button>
-                    <?php if (isRecaptchaConfigured()) echo displayRecaptchaBadge(); ?>
+                    <?php if (isRecaptchaConfigured()) {
+                        echo displayRecaptchaBadge();
+                    } ?>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
 
 <script>
 document.getElementById('profilePictureInput').addEventListener('change', function(e) {
