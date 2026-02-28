@@ -27,7 +27,7 @@ $otp_verified = false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_otp'])) {
 
     // Validate protections
-    $validation = validateFormProtection('forgot_password', 3, 60); // 3 per 5 min
+    $validation = validateFormProtection('forgot_password', 3, 300); // 3 per 5 min
     if (!$validation['valid']) {
         $error = implode('<br>', $validation['errors']);
     } elseif (isRecaptchaConfigured()) {

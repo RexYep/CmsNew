@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
         
-        // If all validations passed, proceed with login
+        // If all validations passed,proceed with login
         if (empty($error)) {
             $email    = sanitizeInput($_POST['email']);
             $password = $_POST['password'];
