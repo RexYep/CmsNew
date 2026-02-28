@@ -50,7 +50,7 @@ function generateToken($length = 32)
 }
 
 // Function to register a new user
-function registerUser($full_name, $email, $phone, $password)
+function registerUser($full_name, $email, $phone, $password, $address = '', $proof_photo = '', $proof_photo_public_id = '')
 {
     global $conn;
 
@@ -89,11 +89,10 @@ function registerUser($full_name, $email, $phone, $password)
     // Hash password
     $hashed_password = hashPassword($password);
 
-    // Insert user
     // Insert user with pending approval status
 $approval_status = 'pending'; // Users need approval
-$stmt = $conn->prepare("INSERT INTO users (full_name, email, phone, password, role, approval_status) VALUES (?, ?, ?, ?, 'user', ?)");
-$stmt->bind_param("sssss", $full_name, $email, $phone, $hashed_password, $approval_status);
+$stmt = $conn->prepare("INSERT INTO users (full_name, email, phone, password, role, approval_status, address, proof_photo, proof_photo_public_id) VALUES (?, ?, ?, ?, 'user', ?, ?, ?, ?)");
+$stmt->bind_param("ssssssss", $full_name, $email, $phone, $hashed_password, $approval_status, $address, $proof_photo, $proof_photo_public_id);
 
     if ($stmt->execute()) {
         return ['success' => true, 'message' => 'Registration successful'];

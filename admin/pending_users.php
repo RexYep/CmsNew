@@ -61,7 +61,7 @@ if (isset($_GET['action']) && isset($_GET['user_id'])) {
 
 // Get pending users
 $pending_users = $conn->query("
-    SELECT user_id, full_name, email, phone, created_at, profile_picture 
+    SELECT user_id, full_name, email, phone, address, proof_photo, created_at, profile_picture 
     FROM users 
     WHERE approval_status = 'pending' AND role = 'user'
     ORDER BY created_at DESC
@@ -143,9 +143,11 @@ include '../includes/navbar.php';
                                     <th>Name</th>
                                     <th>Email</th>
                                     <th>Phone</th>
+                                    <th>Address</th>
+                                    <th>Proof Photo</th>
                                     <th>Registered</th>
                                     <th>Actions</th>
-                                </tr>
+                                                                    </tr>
                             </thead>
                             <tbody>
                                 <?php while ($user = $pending_users->fetch_assoc()): ?>
@@ -170,6 +172,26 @@ include '../includes/navbar.php';
                                     </td>
                                     <td><?php echo htmlspecialchars($user['email']); ?></td>
                                     <td><?php echo htmlspecialchars($user['phone'] ?? 'N/A'); ?></td>
+                                    <td>
+    <small><?php echo htmlspecialchars($user['address'] ?? 'N/A'); ?></small>
+</td>
+<td>
+    <?php if (!empty($user['proof_photo'])): ?>
+        <a href="<?php echo htmlspecialchars($user['proof_photo']); ?>" 
+           target="_blank"
+           title="View proof photo">
+            <img src="<?php echo htmlspecialchars($user['proof_photo']); ?>"
+                 alt="Proof Photo"
+                 style="width:60px; height:60px; object-fit:cover; border-radius:8px; border:1px solid #dee2e6; cursor:pointer;"
+                 data-bs-toggle="tooltip"
+                 title="Click to view full image">
+        </a>
+    <?php else: ?>
+        <span class="badge bg-warning text-dark">
+            <i class="bi bi-image"></i> No Photo
+        </span>
+    <?php endif; ?>
+</td>
                                     <td>
     <?php
     // Quick email validation check

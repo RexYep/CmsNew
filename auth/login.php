@@ -467,7 +467,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <!-- Form -->
     <form method="POST" action="" data-recaptcha="login">
-         <?php formProtection(); ?>  <!-- ← NEW: Honeypot + CSRF -->
+         <?php formProtection(); ?>
             <!-- Email -->
             <label class="form-label">Email Address</label>
             <div class="input-wrap">

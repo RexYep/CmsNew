@@ -8,6 +8,7 @@ require_once '../config/config.php';
 require_once '../includes/functions.php';
 require_once '../includes/security_helper.php';
 require_once '../includes/recaptcha_helper.php';
+require_once '../includes/cloudinary_helper.php';
 
 if (isLoggedIn()) {
     header("Location: " . (isAdmin() ? '../admin/index.php' : '../user/index.php'));
@@ -32,23 +33,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
         
-        // If all validations passed, proceed with registration
+       // If all validations passed, proceed with registration
         if (empty($error)) {
             $full_name        = sanitizeInput($_POST['full_name']);
             $email            = sanitizeInput($_POST['email']);
             $phone            = sanitizeInput($_POST['phone']);
+            $address          = sanitizeInput($_POST['address']);
             $password         = $_POST['password'];
             $confirm_password = $_POST['confirm_password'];
 
             if ($password !== $confirm_password) {
                 $error = 'Passwords do not match.';
             } else {
-                $result = registerUser($full_name, $email, $phone, $password);
-                if ($result['success']) {
-                    $success   = 'Registration successful! Your account is pending approval. You will receive an email once your account is approved by an administrator.';
-                    $full_name = $email = $phone = '';
+                // Handle proof photo upload
+                $proof_photo           = '';
+                $proof_photo_public_id = '';
+
+                if (empty($_FILES['proof_photo']['name']) || $_FILES['proof_photo']['error'] !== 0) {
+                    $error = 'Proof of address photo is required.';
                 } else {
-                    $error = $result['message'];
+                    $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+                    if (!in_array($_FILES['proof_photo']['type'], $allowed_types)) {
+                        $error = 'Invalid photo format. Allowed: JPG, PNG, WEBP.';
+                    } elseif ($_FILES['proof_photo']['size'] > 5 * 1024 * 1024) {
+                        $error = 'Photo must be under 5MB.';
+                    } else {
+                        if (function_exists('uploadToCloudinary')) {
+                            $upload_result = uploadToCloudinary($_FILES['proof_photo'], 'proof_photos');
+                            if ($upload_result['success']) {
+                                $proof_photo           = $upload_result['url'];
+                                $proof_photo_public_id = $upload_result['public_id'];
+                            } else {
+                                $error = 'Photo upload failed: ' . $upload_result['error'];
+                            }
+                        } else {
+                            // Local fallback
+                            $ext         = strtolower(pathinfo($_FILES['proof_photo']['name'], PATHINFO_EXTENSION));
+                            $proof_photo = 'uploads/avatars/proof_' . time() . '_' . uniqid() . '.' . $ext;
+                            move_uploaded_file($_FILES['proof_photo']['tmp_name'], '../' . $proof_photo);
+                        }
+                    }
+                }
+
+                if (empty($error)) {
+                    $result = registerUser($full_name, $email, $phone, $password, $address, $proof_photo, $proof_photo_public_id);
+                    if ($result['success']) {
+                        $success   = 'Registration successful! Your account is pending approval. You will receive an email once your account is approved by an administrator.';
+                        $full_name = $email = $phone = $address = '';
+                    } else {
+                        $error = $result['message'];
+                    }
                 }
             }
         }
@@ -481,7 +515,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <?php else: ?>
         <!-- Form (hide after success) -->
-      <form method="POST" action="" id="registerForm" data-recaptcha="register">
+      <form method="POST" action="" id="registerForm" data-recaptcha="register" enctype="multipart/form-data">
         <?php formProtection(); ?>
             <!-- Full Name -->
             <label class="form-label">Full Name <span style="color:#f72585;">*</span></label>
@@ -508,6 +542,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <input type="tel" class="form-control" name="phone"
                        placeholder="09123456789"
                        value="<?php echo isset($phone) ? htmlspecialchars($phone) : ''; ?>">
+            </div>
+
+            <!-- Address -->
+            <label class="form-label">Address <span style="color:#f72585;">*</span></label>
+            <div class="input-wrap">
+                <i class="bi bi-geo-alt input-icon"></i>
+                <input type="text" class="form-control" name="address" required
+                       placeholder="House No., Street, Barangay, City"
+                       value="<?php echo isset($address) ? htmlspecialchars($address) : ''; ?>">
+            </div>
+
+            <!-- Proof of Address Photo -->
+            <label class="form-label">
+                Proof of Address Photo <span style="color:#f72585;">*</span>
+                <span style="color:var(--muted); font-weight:400; font-size:0.78rem;">(Photo ng bahay / barangay ID)</span>
+            </label>
+            <div class="input-wrap" style="display:block;">
+                <input type="file" class="form-control" name="proof_photo"
+                       accept="image/jpeg,image/png,image/webp" required
+                       style="padding-left:14px;"
+                       onchange="previewPhoto(this)">
+                <div id="photoPreview" style="margin-top:10px; display:none;">
+                    <img id="previewImg" src="" alt="Preview"
+                         style="max-width:100%; max-height:160px; border-radius:10px; border:1px solid var(--border);">
+                </div>
+                <small style="color:var(--muted); font-size:0.76rem;">Max 5MB · JPG, PNG, WEBP</small>
             </div>
 
             <!-- Password -->
@@ -627,6 +687,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     confirmInput.focus();
                 }
             });
+        }
+        // Photo preview
+        function previewPhoto(input) {
+            const preview = document.getElementById('photoPreview');
+            const img     = document.getElementById('previewImg');
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    img.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
         }
     </script>
 </body>

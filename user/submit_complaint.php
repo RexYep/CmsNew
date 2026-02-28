@@ -34,6 +34,22 @@ $categories = getAllCategories();
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+     $validation = validateFormProtection('complaint_submit', 3, 60); // 3 per minute
+    
+    if (!$validation['valid']) {
+        $error = implode('<br>', $validation['errors']);
+    } else {
+        // Validate reCAPTCHA
+        if (isRecaptchaConfigured()) {
+            $recaptcha = validateRecaptchaFromPost(0.5);
+            if (!$recaptcha['success']) {
+                $error = $recaptcha['message'];
+            }
+        }
+        
+        // If validation passed, proceed
+        if (empty($error)) {
+    
 
    $limit_check = checkDailyComplaintLimit($user_id);
     if (!$limit_check['can_submit']) {
@@ -165,13 +181,18 @@ while ($admin = $super_admins->fetch_assoc()) {
             $error = 'Failed to submit complaint. Please try again.';
         }
     }
-    } // Close the daily limit check
+        } // Close the daily limit check
+
+      } // End empty($error) check
+    } // End validation check
     
 }
+
 
 include '../includes/header.php';
 include '../includes/navbar.php';
 ?>
+<?php if (function_exists('loadRecaptchaScript')) echo loadRecaptchaScript(); ?>
 
 <div class="row">
     <div class="col-lg-8 mx-auto">
@@ -210,7 +231,8 @@ include '../includes/navbar.php';
                 <?php endif; ?>
 
                 <form method="POST" action="" enctype="multipart/form-data" <?php echo !$can_submit ? 'style="pointer-events: none; opacity: 0.6;"' : ''; ?>>
-                    <div class="mb-3">
+                <?php formProtection(); ?>    
+                <div class="mb-3">
                         <label for="category_id" class="form-label">Category <span class="text-danger">*</span></label>
                         <select class="form-select" id="category_id" name="category_id" required <?php echo !$can_submit ? 'disabled' : ''; ?>>
                             <option value="">Select Category</option>
@@ -286,6 +308,7 @@ include '../includes/navbar.php';
                             <i class="bi bi-arrow-left"></i> Back to Dashboard
                         </a>
                     </div>
+                    <?php if (isRecaptchaConfigured()) echo displayRecaptchaBadge(); ?>
                 </form>
             </div>
         </div>

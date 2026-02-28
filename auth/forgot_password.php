@@ -6,6 +6,8 @@
 
 require_once '../config/config.php';
 require_once '../includes/functions.php';
+require_once '../includes/security_helper.php';
+require_once '../includes/recaptcha_helper.php';
 
 if (!isset($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -23,7 +25,17 @@ $otp_verified = false;
 
 // Step 1 — Send OTP
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_otp'])) {
-    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+    
+    // Validate protections
+    $validation = validateFormProtection('forgot_password', 3, 300); // 3 per 5 min
+    if (!$validation['valid']) {
+        $error = implode('<br>', $validation['errors']);
+    } elseif (isRecaptchaConfigured()) {
+        $recaptcha = validateRecaptchaFromPost(0.5);
+        if (!$recaptcha['success']) {
+            $error = $recaptcha['message'];
+        }
+    } elseif (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
         $error = 'Invalid request. Please try again.';
     } else {
         $email  = sanitizeInput($_POST['email']);
@@ -120,6 +132,7 @@ if (isset($_SESSION['reset_started_at']) && (time() - $_SESSION['reset_started_a
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <?php echo loadRecaptchaScript(); ?>
     <style>
         :root {
             --navy:   #0d1b2a;
@@ -472,7 +485,8 @@ if (isset($_SESSION['reset_started_at']) && (time() - $_SESSION['reset_started_a
 
         <!-- STEP 1: Email -->
         <?php if ($step === 1): ?>
-        <form method="POST">
+       <form method="POST" data-recaptcha="forgot_password">
+            <?php formProtection(); ?>
             <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
             <label class="form-label">Registered Email Address</label>
             <div class="input-wrap">
@@ -482,6 +496,7 @@ if (isset($_SESSION['reset_started_at']) && (time() - $_SESSION['reset_started_a
             <button type="submit" name="send_otp" class="btn-submit">
                 <i class="bi bi-send-fill"></i> Send OTP Code
             </button>
+            <?php if (isRecaptchaConfigured()) echo displayRecaptchaBadge(); ?>
         </form>
 
         <!-- STEP 2: OTP -->

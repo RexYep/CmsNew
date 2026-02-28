@@ -1,30 +1,25 @@
 <?php
-// ============================================
-// GENERAL APPLICATION CONFIGURATION
-// config/config.php
-// ============================================
 
-// Start session if not already started
+// config/config.php
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 use Cloudinary\Configuration\Configuration;
-// LOAD .env FILE (LOCAL DEVELOPMENT ONLY)
+
 
 $env_file = dirname(__DIR__) . '/.env';
 if (file_exists($env_file)) {
     $lines = file($env_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
-        // Skip comment lines
+      
         if (strpos(trim($line), '#') === 0) continue;
-        // Skip lines without =
         if (strpos($line, '=') === false) continue;
 
         [$key, $value] = explode('=', $line, 2);
         $key   = trim($key);
         $value = trim($value);
 
-        // Only set if not already set by the system
         if (!getenv($key)) {
             putenv("$key=$value");
             $_ENV[$key] = $value;
@@ -36,9 +31,8 @@ define('BASE_PATH',     dirname(__DIR__) . '/');
 define('INCLUDES_PATH', BASE_PATH . 'includes/');
 define('ASSETS_PATH',   BASE_PATH . 'assets/');
 
-// ============================================
+
 // APPLICATION SETTINGS
-// ============================================
 define('SITE_NAME', 'Complaint Management System');
 define('SITE_URL',  getenv('SITE_URL') ?: 'http://localhost/cms3/');
 define('ADMIN_EMAIL', 'cmsprop233@gmail.com');
@@ -48,7 +42,6 @@ define('ADMIN_EMAIL', 'cmsprop233@gmail.com');
 define('ROLE_USER',  'user');
 define('ROLE_ADMIN', 'admin');
 
-// Complaint Status
 define('STATUS_PENDING',     'Pending');
 define('STATUS_IN_PROGRESS', 'In Progress');
 define('STATUS_RESOLVED',    'Resolved');
@@ -70,16 +63,11 @@ define('MAX_LOGIN_ATTEMPTS', 5);  // Maximum failed attempts before lockout
 define('LOCKOUT_DURATION',   15); // Lockout duration in minutes
 define('ATTEMPT_RESET_TIME', 30); // Reset failed attempts after X minutes
 
-// ============================================
-// CLOUDINARY CONFIGURATION
-// Values come from .env (local) or
-// Render Dashboard (production)
-// ============================================
 define('CLOUDINARY_CLOUD_NAME', getenv('CLOUDINARY_CLOUD_NAME') ?: '');
 define('CLOUDINARY_API_KEY',    getenv('CLOUDINARY_API_KEY')    ?: '');
 define('CLOUDINARY_API_SECRET', getenv('CLOUDINARY_API_SECRET') ?: '');
 
-// Initialize Cloudinary SDK
+
 if (file_exists(BASE_PATH . 'vendor/autoload.php')) {
     require_once BASE_PATH . 'vendor/autoload.php';
 
@@ -95,20 +83,14 @@ if (file_exists(BASE_PATH . 'vendor/autoload.php')) {
     }
 }
 
-// Include Cloudinary helper functions
 if (file_exists(INCLUDES_PATH . 'cloudinary_helper.php')) {
     require_once INCLUDES_PATH . 'cloudinary_helper.php';
 }
 
-// ============================================
-// INCLUDE DATABASE CONNECTION
-// ============================================
+
 require_once 'database.php';
 
-// ============================================
 // HELPER FUNCTIONS
-// ============================================
-
 function isLoggedIn() {
     return isset($_SESSION['user_id']) && isset($_SESSION['role']);
 }

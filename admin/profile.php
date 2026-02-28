@@ -7,6 +7,8 @@
 require_once '../config/config.php';
 require_once '../includes/functions.php';
 require_once '../includes/cloudinary_helper.php';
+require_once '../includes/security_helper.php';
+require_once '../includes/recaptcha_helper.php';
 
 requireAdmin();
 
@@ -21,12 +23,32 @@ $user = getUserById($user_id);
 
 // Handle profile picture upload with CLOUDINARY
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_picture'])) {
-    if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === 0) {
+    
+    // ========== SPAM PROTECTION START ==========
+    // Validate honeypot, CSRF, and rate limiting
+    $validation = validateFormProtection('profile_upload', 3, 60); // 3 attempts per minute
+    
+    if (!$validation['valid']) {
+        $error = implode('<br>', $validation['errors']);
+    } else {
+        // Validate reCAPTCHA (if configured)
+        if (isRecaptchaConfigured()) {
+            $recaptcha = validateRecaptchaFromPost(0.4); // Lower score for authenticated users
+            if (!$recaptcha['success']) {
+                $error = $recaptcha['message'];
+            }
+        }
+        
+        // If validation passed, proceed with upload
+        if (empty($error)) {
+            // ========== SPAM PROTECTION END ==========
+            
+            if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === 0) {
 
-        $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
-        if (!in_array($_FILES['profile_picture']['type'], $allowed_types)) {
-            $error = 'Only JPG, PNG, and GIF images are allowed';
-        } elseif ($_FILES['profile_picture']['size'] > 2 * 1024 * 1024) {
+                $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+                if (!in_array($_FILES['profile_picture']['type'], $allowed_types)) {
+                    $error = 'Only JPG, PNG, and GIF images are allowed';
+                } elseif ($_FILES['profile_picture']['size'] > 2 * 1024 * 1024) {
             $error = 'Avatar size must not exceed 2MB';
         } else {
             // Delete old avatar from Cloudinary if exists
@@ -54,10 +76,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_picture'])) {
             } else {
                 $error = 'Upload failed: ' . $upload_result['error'];
             }
-        }
+     }
     } else {
         $error = 'Please select a file to upload';
     }
+        } // End empty($error) check
+    } // End validation check
 }
 
 // Handle profile picture delete
@@ -132,6 +156,8 @@ if (!empty($user['avatar_url'])) {
 include '../includes/header.php';
 include '../includes/navbar.php';
 ?>
+
+<?php if (function_exists('loadRecaptchaScript')) echo loadRecaptchaScript(); ?>
 
 <div class="row">
     <div class="col-lg-8">
@@ -324,7 +350,8 @@ include '../includes/navbar.php';
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" enctype="multipart/form-data">
+            <form method="POST" enctype="multipart/form-data" data-recaptcha="profile_upload">
+                <?php formProtection(); ?>
                 <div class="modal-body">
                     <div class="text-center mb-3">
                         <div id="imagePreview" class="mb-3">
@@ -333,7 +360,7 @@ include '../includes/navbar.php';
                                      class="rounded-circle" width="150" height="150"
                                      style="object-fit: cover;" id="currentImage">
                             <?php else: ?>
-                              <!-- BAGO -->
+                             
                             <div class="user-avatar" style="width: 36px; height: 36px; font-size: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                                 <?php echo strtoupper(substr($_SESSION['full_name'], 0, 1)); ?>
                             </div>
@@ -369,6 +396,7 @@ include '../includes/navbar.php';
                     <button type="submit" name="upload_picture" class="btn btn-primary">
                         <i class="bi bi-upload"></i> Upload
                     </button>
+                    <?php if (isRecaptchaConfigured()) echo displayRecaptchaBadge(); ?>
                 </div>
             </form>
         </div>

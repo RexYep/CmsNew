@@ -1,12 +1,8 @@
 <?php
-// ============================================
+
 // DATABASE CONNECTION CONFIGURATION
 // config/database.php
-// ============================================
 
-// Database Configuration
-// Uses environment variables in production (Render + Aiven)
-// Falls back to local values for development (XAMPP)
 
 $host     = getenv('DATABASE_HOST') ?: 'localhost';
 $username = getenv('DATABASE_USER') ?: 'root';
@@ -18,9 +14,9 @@ $port     = (int)(getenv('DATABASE_PORT') ?: 3306);
 $is_production = getenv('DATABASE_HOST') !== false;
 
 if ($is_production) {
-    // ============================================
+  
     // PRODUCTION: Aiven MySQL with SSL
-    // ============================================
+  
     $conn = mysqli_init();
 
     if (!$conn) {
@@ -46,9 +42,8 @@ if ($is_production) {
     }
 
 } else {
-    // ============================================
     // LOCAL DEVELOPMENT: Standard MySQL (XAMPP)
-    // ============================================
+   
     $conn = new mysqli($host, $username, $password, $dbname, $port);
 
     if ($conn->connect_error) {

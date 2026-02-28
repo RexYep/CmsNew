@@ -1,6 +1,6 @@
 <?php
 // ============================================
-// MANAGE COMPLAINTS PAGE
+// MANAGE COMPLAINTS PAGE (with Archive Feature)
 // admin/manage_complaints.php
 // ============================================
 
@@ -10,33 +10,63 @@ require_once '../includes/functions.php';
 requireAdmin();
 
 $page_title = "Manage Complaints";
+$admin_id   = $_SESSION['user_id'];
+
+// ============================================
+// HANDLE ARCHIVE ACTION
+// ============================================
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['archive_complaint'])) {
+    $complaint_id   = (int)$_POST['complaint_id'];
+    $archive_reason = sanitizeInput($_POST['archive_reason'] ?? '');
+
+    // Only allow Resolved or Closed complaints
+    $stmt = $conn->prepare("
+        SELECT complaint_id FROM complaints
+        WHERE complaint_id = ? AND is_archived = 0 AND status IN ('Resolved', 'Closed')
+    ");
+    $stmt->bind_param("i", $complaint_id);
+    $stmt->execute();
+
+    if ($stmt->get_result()->num_rows > 0) {
+        $stmt = $conn->prepare("
+            UPDATE complaints
+            SET is_archived = 1, archived_by = ?, archived_at = NOW(), archive_reason = ?
+            WHERE complaint_id = ?
+        ");
+        $stmt->bind_param("isi", $admin_id, $archive_reason, $complaint_id);
+        if ($stmt->execute()) {
+            $success = "Complaint #$complaint_id has been archived successfully.";
+        } else {
+            $error = "Failed to archive complaint.";
+        }
+    } else {
+        $error = "Only Resolved or Closed complaints can be archived.";
+    }
+}
 
 // Filter parameters
-$status_filter = isset($_GET['status']) ? sanitizeInput($_GET['status']) : '';
-$priority_filter = isset($_GET['priority']) ? sanitizeInput($_GET['priority']) : '';
-$category_filter = isset($_GET['category']) ? sanitizeInput($_GET['category']) : '';
-$search_query = isset($_GET['search']) ? sanitizeInput($_GET['search']) : '';
-
-// Pagination
-$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-$records_per_page = RECORDS_PER_PAGE;
-$offset = ($page - 1) * $records_per_page;
-
-// Build query
-$where_conditions = [];
-$params = [];
-$types = "";
-
+$status_filter   = isset($_GET['status'])          ? sanitizeInput($_GET['status'])          : '';
+$priority_filter = isset($_GET['priority'])        ? sanitizeInput($_GET['priority'])        : '';
+$category_filter = isset($_GET['category'])        ? sanitizeInput($_GET['category'])        : '';
+$search_query    = isset($_GET['search'])          ? sanitizeInput($_GET['search'])          : '';
 $approval_filter = isset($_GET['approval_status']) ? sanitizeInput($_GET['approval_status']) : '';
 
-// Add to where conditions
+// Pagination
+$page             = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$records_per_page = RECORDS_PER_PAGE;
+$offset           = ($page - 1) * $records_per_page;
+
+// Build query — exclude archived from main list
+$where_conditions = ["c.is_archived = 0"];
+$params = [];
+$types  = "";
+
 if (!empty($approval_filter)) {
     $where_conditions[] = "c.approval_status = ?";
     $params[] = $approval_filter;
     $types .= "s";
 }
 
-// Add assignment filter for regular admins
 if (!isSuperAdmin()) {
     $where_conditions[] = "c.assigned_to = ?";
     $params[] = $_SESSION['user_id'];
@@ -70,13 +100,12 @@ if (!empty($search_query)) {
     $types .= "sss";
 }
 
-$where_clause = !empty($where_conditions) ? "WHERE " . implode(" AND ", $where_conditions) : "";
+$where_clause = "WHERE " . implode(" AND ", $where_conditions);
 
 // Count total records
-$count_query = "SELECT COUNT(*) as total FROM complaints c 
-                LEFT JOIN users u ON c.user_id = u.user_id 
+$count_query = "SELECT COUNT(*) as total FROM complaints c
+                LEFT JOIN users u ON c.user_id = u.user_id
                 $where_clause";
-
 if (!empty($params)) {
     $stmt = $conn->prepare($count_query);
     $stmt->bind_param($types, ...$params);
@@ -88,6 +117,12 @@ if (!empty($params)) {
 
 $total_pages = ceil($total_records / $records_per_page);
 
+// Count archived
+$archived_count_query = isSuperAdmin()
+    ? "SELECT COUNT(*) as total FROM complaints WHERE is_archived = 1"
+    : "SELECT COUNT(*) as total FROM complaints WHERE is_archived = 1 AND assigned_to = $admin_id";
+$archived_count = $conn->query($archived_count_query)->fetch_assoc()['total'];
+
 // Fetch complaints
 $query = "
     SELECT c.*, cat.category_name, u.full_name as user_name, u.email as user_email
@@ -95,10 +130,10 @@ $query = "
     LEFT JOIN categories cat ON c.category_id = cat.category_id
     LEFT JOIN users u ON c.user_id = u.user_id
     $where_clause
-    ORDER BY 
-        CASE WHEN c.status = 'Pending' THEN 1
+    ORDER BY
+        CASE WHEN c.status = 'Pending'     THEN 1
              WHEN c.status = 'In Progress' THEN 2
-             WHEN c.status = 'Resolved' THEN 3
+             WHEN c.status = 'Resolved'    THEN 3
              ELSE 4 END,
         c.priority DESC,
         c.submitted_date DESC
@@ -123,9 +158,23 @@ include '../includes/header.php';
 include '../includes/navbar.php';
 ?>
 
+<?php if (!empty($error)): ?>
+    <div class="alert alert-danger alert-dismissible fade show">
+        <i class="bi bi-exclamation-triangle me-2"></i><?php echo $error; ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+<?php endif; ?>
+
+<?php if (!empty($success)): ?>
+    <div class="alert alert-success alert-dismissible fade show">
+        <i class="bi bi-check-circle me-2"></i><?php echo htmlspecialchars($success); ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+<?php endif; ?>
+
 <?php if (!isSuperAdmin()): ?>
     <div class="alert alert-info">
-        <i class="bi bi-info-circle"></i> <strong>Regular Admin:</strong> 
+        <i class="bi bi-info-circle"></i> <strong>Regular Admin:</strong>
         You can only view and manage complaints that have been assigned to you by a Super Admin.
     </div>
 <?php endif; ?>
@@ -140,48 +189,48 @@ include '../includes/navbar.php';
                         <label for="status" class="form-label">Status</label>
                         <select class="form-select" id="status" name="status">
                             <option value="">All Status</option>
-                            <option value="Pending" <?php echo $status_filter == 'Pending' ? 'selected' : ''; ?>>Pending</option>
+                            <option value="Pending"     <?php echo $status_filter == 'Pending'     ? 'selected' : ''; ?>>Pending</option>
                             <option value="In Progress" <?php echo $status_filter == 'In Progress' ? 'selected' : ''; ?>>In Progress</option>
-                            <option value="Resolved" <?php echo $status_filter == 'Resolved' ? 'selected' : ''; ?>>Resolved</option>
-                            <option value="Closed" <?php echo $status_filter == 'Closed' ? 'selected' : ''; ?>>Closed</option>
+                            <option value="Resolved"    <?php echo $status_filter == 'Resolved'    ? 'selected' : ''; ?>>Resolved</option>
+                            <option value="Closed"      <?php echo $status_filter == 'Closed'      ? 'selected' : ''; ?>>Closed</option>
                         </select>
                     </div>
-                    
+
                     <div class="col-md-3">
                         <label for="priority" class="form-label">Priority</label>
                         <select class="form-select" id="priority" name="priority">
                             <option value="">All Priority</option>
-                            <option value="Low" <?php echo $priority_filter == 'Low' ? 'selected' : ''; ?>>Low</option>
+                            <option value="Low"    <?php echo $priority_filter == 'Low'    ? 'selected' : ''; ?>>Low</option>
                             <option value="Medium" <?php echo $priority_filter == 'Medium' ? 'selected' : ''; ?>>Medium</option>
-                            <option value="High" <?php echo $priority_filter == 'High' ? 'selected' : ''; ?>>High</option>
+                            <option value="High"   <?php echo $priority_filter == 'High'   ? 'selected' : ''; ?>>High</option>
                         </select>
                     </div>
-                    
+
                     <div class="col-md-3">
                         <label for="category" class="form-label">Category</label>
                         <select class="form-select" id="category" name="category">
                             <option value="">All Categories</option>
                             <?php foreach ($categories as $cat): ?>
-                                <option value="<?php echo $cat['category_id']; ?>" 
+                                <option value="<?php echo $cat['category_id']; ?>"
                                     <?php echo $category_filter == $cat['category_id'] ? 'selected' : ''; ?>>
                                     <?php echo htmlspecialchars($cat['category_name']); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    
+
                     <div class="col-md-3">
                         <label for="search" class="form-label">Search</label>
                         <div class="input-group">
-                            <input type="text" class="form-control" id="search" name="search" 
-                                   placeholder="Subject, description, user..." 
+                            <input type="text" class="form-control" id="search" name="search"
+                                   placeholder="Subject, description, user..."
                                    value="<?php echo htmlspecialchars($search_query); ?>">
                             <button type="submit" class="btn btn-primary">
                                 <i class="bi bi-search"></i>
                             </button>
                         </div>
                     </div>
-                    
+
                     <?php if (!empty($status_filter) || !empty($priority_filter) || !empty($category_filter) || !empty($search_query)): ?>
                     <div class="col-12">
                         <a href="manage_complaints.php" class="btn btn-outline-secondary btn-sm">
@@ -191,23 +240,15 @@ include '../includes/navbar.php';
                     <?php endif; ?>
 
                     <div class="col-md-3">
-    <label for="approval_status" class="form-label">Approval Status</label>
-    <select class="form-select" id="approval_status" name="approval_status">
-        <option value="">All Approvals</option>
-        <option value="pending_review" <?php echo $approval_filter == 'pending_review' ? 'selected' : ''; ?>>
-            Pending Review
-        </option>
-        <option value="approved" <?php echo $approval_filter == 'approved' ? 'selected' : ''; ?>>
-            Approved
-        </option>
-        <option value="changes_requested" <?php echo $approval_filter == 'changes_requested' ? 'selected' : ''; ?>>
-            Changes Requested
-        </option>
-        <option value="rejected" <?php echo $approval_filter == 'rejected' ? 'selected' : ''; ?>>
-            Rejected
-        </option>
-    </select>
-</div>
+                        <label for="approval_status" class="form-label">Approval Status</label>
+                        <select class="form-select" id="approval_status" name="approval_status">
+                            <option value="">All Approvals</option>
+                            <option value="pending_review"    <?php echo $approval_filter == 'pending_review'    ? 'selected' : ''; ?>>Pending Review</option>
+                            <option value="approved"          <?php echo $approval_filter == 'approved'          ? 'selected' : ''; ?>>Approved</option>
+                            <option value="changes_requested" <?php echo $approval_filter == 'changes_requested' ? 'selected' : ''; ?>>Changes Requested</option>
+                            <option value="rejected"          <?php echo $approval_filter == 'rejected'          ? 'selected' : ''; ?>>Rejected</option>
+                        </select>
+                    </div>
                 </form>
             </div>
         </div>
@@ -221,9 +262,18 @@ include '../includes/navbar.php';
             <div class="card-header">
                 <div class="d-flex justify-content-between align-items-center">
                     <span><i class="bi bi-folder"></i> All Complaints (<?php echo $total_records; ?>)</span>
-                    <a href="index.php" class="btn btn-sm btn-light">
-                        <i class="bi bi-arrow-left"></i> Back to Dashboard
-                    </a>
+                    <div class="d-flex gap-2">
+                        <!-- Archive Link -->
+                        <a href="archived_complaints.php" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-archive"></i> Archived
+                            <?php if ($archived_count > 0): ?>
+                                <span class="badge bg-secondary"><?php echo $archived_count; ?></span>
+                            <?php endif; ?>
+                        </a>
+                        <a href="index.php" class="btn btn-sm btn-light">
+                            <i class="bi bi-arrow-left"></i> Back to Dashboard
+                        </a>
+                    </div>
                 </div>
             </div>
             <div class="card-body">
@@ -249,10 +299,8 @@ include '../includes/navbar.php';
                                 <tr>
                                     <td><strong>#<?php echo $complaint['complaint_id']; ?></strong></td>
                                     <td>
-                                        <div>
-                                            <strong><?php echo htmlspecialchars($complaint['user_name']); ?></strong><br>
-                                            <small class="text-muted"><?php echo htmlspecialchars($complaint['user_email']); ?></small>
-                                        </div>
+                                        <strong><?php echo htmlspecialchars($complaint['user_name']); ?></strong><br>
+                                        <small class="text-muted"><?php echo htmlspecialchars($complaint['user_email']); ?></small>
                                     </td>
                                     <td>
                                         <div style="max-width: 250px;">
@@ -281,8 +329,8 @@ include '../includes/navbar.php';
                                         <small><?php echo formatDate($complaint['submitted_date']); ?></small>
                                     </td>
                                     <td>
-                                        <?php 
-                                        $days = daysElapsed($complaint['submitted_date']);
+                                        <?php
+                                        $days  = daysElapsed($complaint['submitted_date']);
                                         $color = $days > 7 ? 'text-danger' : ($days > 3 ? 'text-warning' : 'text-muted');
                                         ?>
                                         <small class="<?php echo $color; ?>">
@@ -290,41 +338,52 @@ include '../includes/navbar.php';
                                         </small>
                                     </td>
                                     <td>
-                                        
-     <div class="btn-group" role="group">
-        <a href="complaint_details.php?id=<?php echo $complaint['complaint_id']; ?>" 
-           class="btn btn-sm btn-outline-primary" title="View Details">
-            <i class="bi bi-eye"></i>
-        </a>
-        <?php if (isSuperAdmin() && empty($complaint['assigned_to'])): ?>
-            <button type="button" class="btn btn-sm btn-outline-warning" 
-                    title="Needs Assignment" 
-                    onclick="window.location.href='complaint_details.php?id=<?php echo $complaint['complaint_id']; ?>#assign'">
-                <i class="bi bi-exclamation-triangle"></i>
-            </button>
-        <?php endif; ?>
-    </div>
-                                       
+                                        <div class="btn-group" role="group">
+                                            <a href="complaint_details.php?id=<?php echo $complaint['complaint_id']; ?>"
+                                               class="btn btn-sm btn-outline-primary" title="View Details">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <?php if (isSuperAdmin() && empty($complaint['assigned_to'])): ?>
+                                                <button type="button" class="btn btn-sm btn-outline-warning"
+                                                        title="Needs Assignment"
+                                                        onclick="window.location.href='complaint_details.php?id=<?php echo $complaint['complaint_id']; ?>#assign'">
+                                                    <i class="bi bi-exclamation-triangle"></i>
+                                                </button>
+                                            <?php endif; ?>
+
+                                            <!-- Archive Button — Resolved or Closed only -->
+                                            <?php if (in_array($complaint['status'], ['Resolved', 'Closed'])): ?>
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-secondary"
+                                                        title="Archive complaint"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#archiveModal"
+                                                        data-id="<?php echo $complaint['complaint_id']; ?>"
+                                                        data-subject="<?php echo htmlspecialchars($complaint['subject']); ?>">
+                                                    <i class="bi bi-archive"></i>
+                                                </button>
+                                            <?php endif; ?>
+                                        </div>
                                     </td>
                                     <td>
-    <?php
-    $approval_badges = [
-        'pending_review' => 'badge bg-warning text-dark',
-        'approved' => 'badge bg-success',
-        'rejected' => 'badge bg-danger',
-        'changes_requested' => 'badge bg-info'
-    ];
-    $approval_text = [
-        'pending_review' => 'Pending',
-        'approved' => 'Approved',
-        'rejected' => 'Rejected',
-        'changes_requested' => 'Changes'
-    ];
-    ?>
-    <span class="<?php echo $approval_badges[$complaint['approval_status']]; ?>">
-        <?php echo $approval_text[$complaint['approval_status']]; ?>
-    </span>
-</td>
+                                        <?php
+                                        $approval_badges = [
+                                            'pending_review'   => 'badge bg-warning text-dark',
+                                            'approved'         => 'badge bg-success',
+                                            'rejected'         => 'badge bg-danger',
+                                            'changes_requested'=> 'badge bg-info'
+                                        ];
+                                        $approval_text = [
+                                            'pending_review'   => 'Pending',
+                                            'approved'         => 'Approved',
+                                            'rejected'         => 'Rejected',
+                                            'changes_requested'=> 'Changes'
+                                        ];
+                                        ?>
+                                        <span class="<?php echo $approval_badges[$complaint['approval_status']]; ?>">
+                                            <?php echo $approval_text[$complaint['approval_status']]; ?>
+                                        </span>
+                                    </td>
                                 </tr>
                                 <?php endwhile; ?>
                             </tbody>
@@ -340,20 +399,15 @@ include '../includes/navbar.php';
                                     <i class="bi bi-chevron-left"></i> Previous
                                 </a>
                             </li>
-                            
-                            <?php 
+                            <?php
                             $start_page = max(1, $page - 2);
-                            $end_page = min($total_pages, $page + 2);
-                            
-                            for ($i = $start_page; $i <= $end_page; $i++): 
+                            $end_page   = min($total_pages, $page + 2);
+                            for ($i = $start_page; $i <= $end_page; $i++):
                             ?>
                             <li class="page-item <?php echo $page == $i ? 'active' : ''; ?>">
-                                <a class="page-link" href="?page=<?php echo $i; ?>&status=<?php echo $status_filter; ?>&priority=<?php echo $priority_filter; ?>&category=<?php echo $category_filter; ?>&search=<?php echo urlencode($search_query); ?>">
-                                    <?php echo $i; ?>
-                                </a>
+                                <a class="page-link" href="?page=<?php echo $i; ?>&status=<?php echo $status_filter; ?>&priority=<?php echo $priority_filter; ?>&category=<?php echo $category_filter; ?>&search=<?php echo urlencode($search_query); ?>"><?php echo $i; ?></a>
                             </li>
                             <?php endfor; ?>
-                            
                             <li class="page-item <?php echo $page >= $total_pages ? 'disabled' : ''; ?>">
                                 <a class="page-link" href="?page=<?php echo $page+1; ?>&status=<?php echo $status_filter; ?>&priority=<?php echo $priority_filter; ?>&category=<?php echo $category_filter; ?>&search=<?php echo urlencode($search_query); ?>">
                                     Next <i class="bi bi-chevron-right"></i>
@@ -380,7 +434,58 @@ include '../includes/navbar.php';
     </div>
 </div>
 
-</div> <!-- End page-content -->
-</div> <!-- End main-content -->
+</div><!-- End page-content -->
+</div><!-- End main-content -->
+
+<!-- Archive Confirmation Modal -->
+<div class="modal fade" id="archiveModal" tabindex="-1" aria-labelledby="archiveModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-secondary text-white">
+                <h5 class="modal-title" id="archiveModalLabel">
+                    <i class="bi bi-archive"></i> Archive Complaint
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="">
+                <div class="modal-body">
+                    <p>You are about to archive: <strong id="archiveSubject"></strong></p>
+                    <p class="text-muted">
+                        Archived complaints will be hidden from the main list but can be restored anytime
+                        from <strong>Archived Complaints</strong>.
+                    </p>
+
+                    <input type="hidden" name="complaint_id" id="archiveComplaintId">
+
+                    <div class="mb-3">
+                        <label for="archive_reason" class="form-label">Reason (Optional)</label>
+                        <input type="text" class="form-control" name="archive_reason" id="archive_reason"
+                               placeholder="e.g. Resolved and closed, routine cleanup...">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x"></i> Cancel
+                    </button>
+                    <button type="submit" name="archive_complaint" class="btn btn-secondary">
+                        <i class="bi bi-archive"></i> Archive Complaint
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const archiveModal = document.getElementById('archiveModal');
+    archiveModal.addEventListener('show.bs.modal', function (event) {
+        const btn = event.relatedTarget;
+        document.getElementById('archiveComplaintId').value = btn.getAttribute('data-id');
+        document.getElementById('archiveSubject').textContent = btn.getAttribute('data-subject');
+        document.getElementById('archive_reason').value = '';
+    });
+});
+</script>
 
 <?php include '../includes/footer.php'; ?>
