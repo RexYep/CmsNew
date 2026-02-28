@@ -210,9 +210,17 @@ function requireSuperAdmin()
 // Function to logout user
 function logoutUser()
 {
+    $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
+
     session_unset();
     session_destroy();
-    header("Location: " . SITE_URL . "auth/login.php");
+
+    if ($role === 'admin') {
+        header("Location: " . SITE_URL . "admin/login.php"); 
+    } else {
+        header("Location: " . SITE_URL . "auth/login.php");
+    }
+
     exit();
 }
 
@@ -813,6 +821,30 @@ function createPasswordResetRequest($email)
 
     $user = $result->fetch_assoc();
 
+    // Check resend rate limit — max 3 requests per 30 minutes per email
+    $max_resends    = 3;
+    $resend_window  = 30; // minutes
+
+    $stmt = $conn->prepare("
+        SELECT resend_count, last_resend_at 
+        FROM password_resets 
+        WHERE email = ? AND is_used = 0 AND expires_at > NOW()
+    ");
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $existing = $stmt->get_result()->fetch_assoc();
+
+    if ($existing) {
+        $minutes_since = (time() - strtotime($existing['last_resend_at'])) / 60;
+
+        if ($existing['resend_count'] >= $max_resends && $minutes_since < $resend_window) {
+            $wait = ceil($resend_window - $minutes_since);
+            return [
+                'success' => false,
+                'message' => "Too many OTP requests. Please wait {$wait} minute(s) before requesting again."
+            ];
+        }
+    }
     // Generate OTP and token
     $otp = generateOTP(6);
     $token = bin2hex(random_bytes(32));
@@ -824,8 +856,13 @@ function createPasswordResetRequest($email)
     $stmt->execute();
 
     // Insert new reset request
-    $stmt = $conn->prepare("INSERT INTO password_resets (user_id, email, otp_code, token, expires_at) VALUES (?, ?, ?, ?, ?)");
-    $stmt->bind_param("issss", $user['user_id'], $email, $otp, $token, $expires_at);
+ // Carry over resend count if within window, otherwise reset
+    $new_resend_count = ($existing && (time() - strtotime($existing['last_resend_at'])) / 60 < $resend_window)
+        ? $existing['resend_count'] + 1
+        : 1;
+
+    $stmt = $conn->prepare("INSERT INTO password_resets (user_id, email, otp_code, token, expires_at, resend_count, last_resend_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
+    $stmt->bind_param("issssi", $user['user_id'], $email, $otp, $token, $expires_at, $new_resend_count);
 
     if ($stmt->execute()) {
         // Send OTP email
@@ -907,25 +944,77 @@ function verifyOTP($email, $otp)
 {
     global $conn;
 
+    $max_attempts = 3;
+
+    // Get current reset record first (without checking OTP yet)
     $stmt = $conn->prepare("
-        SELECT reset_id, token, user_id 
+        SELECT reset_id, token, user_id, otp_code, otp_attempts
         FROM password_resets 
-        WHERE email = ? AND otp_code = ? AND is_used = 0 AND expires_at > NOW()
+        WHERE email = ? AND is_used = 0 AND expires_at > NOW()
     ");
-    $stmt->bind_param("ss", $email, $otp);
+    $stmt->bind_param("s", $email);
     $stmt->execute();
     $result = $stmt->get_result();
 
     if ($result->num_rows === 0) {
-        return ['success' => false, 'message' => 'Invalid or expired OTP'];
+        return ['success' => false, 'message' => 'Invalid or expired OTP.'];
     }
 
     $reset = $result->fetch_assoc();
 
+    // Check if max attempts reached
+    if ($reset['otp_attempts'] >= $max_attempts) {
+        // Invalidate the reset request
+        $stmt = $conn->prepare("UPDATE password_resets SET is_used = 1 WHERE reset_id = ?");
+        $stmt->bind_param("i", $reset['reset_id']);
+        $stmt->execute();
+
+        // Clear session
+        unset($_SESSION['reset_email'], $_SESSION['reset_token'], $_SESSION['otp_verified'], $_SESSION['reset_started_at']);
+
+        return [
+            'success'   => false,
+            'message'   => 'Too many incorrect attempts. Please request a new OTP.',
+            'max_reached' => true
+        ];
+    }
+
+    // Check if OTP is correct
+    if ($reset['otp_code'] !== $otp) {
+        // Increment attempt counter
+        $stmt = $conn->prepare("UPDATE password_resets SET otp_attempts = otp_attempts + 1 WHERE reset_id = ?");
+        $stmt->bind_param("i", $reset['reset_id']);
+        $stmt->execute();
+
+        $remaining = $max_attempts - ($reset['otp_attempts'] + 1);
+
+        if ($remaining <= 0) {
+            // Invalidate immediately
+            $stmt = $conn->prepare("UPDATE password_resets SET is_used = 1 WHERE reset_id = ?");
+            $stmt->bind_param("i", $reset['reset_id']);
+            $stmt->execute();
+
+            unset($_SESSION['reset_email'], $_SESSION['reset_token'], $_SESSION['otp_verified'], $_SESSION['reset_started_at']);
+
+            return [
+                'success'     => false,
+                'message'     => 'Too many incorrect attempts. Please request a new OTP.',
+                'max_reached' => true
+            ];
+        }
+
+        return [
+            'success'   => false,
+            'message'   => 'Invalid OTP. ' . $remaining . ' attempt(s) remaining.',
+            'remaining' => $remaining
+        ];
+    }
+
+    // OTP is correct
     return [
         'success' => true,
         'message' => 'OTP verified successfully',
-        'token' => $reset['token'],
+        'token'   => $reset['token'],
         'user_id' => $reset['user_id']
     ];
 }

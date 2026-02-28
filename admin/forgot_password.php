@@ -40,13 +40,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_otp'])) {
    } else {
         $email = sanitizeInput($_POST['email']);
 
-        // Pre-check — block admin emails from user forgot password page
+        // Pre-check — block user emails from admin forgot password page
         $stmt = $conn->prepare("SELECT role FROM users WHERE email = ?");
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
 
-        if ($row && $row['role'] === ROLE_ADMIN) {
+        if ($row && $row['role'] !== ROLE_ADMIN) {
             $error = 'No account found with that email address.';
         } else {
             $result = createPasswordResetRequest($email);
@@ -71,8 +71,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verify_otp'])) {
     } else {
         $email  = $_SESSION['reset_email'] ?? '';
         $otp    = sanitizeInput($_POST['otp']);
-        $result = verifyOTP($email, $otp);
 
+        $result = verifyOTP($email, $otp);
         if ($result['success']) {
             $_SESSION['reset_token']  = $result['token'];
             $_SESSION['otp_verified'] = true;
@@ -84,7 +84,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verify_otp'])) {
             $otp_verified = false;
             unset($_SESSION['reset_token'], $_SESSION['otp_verified']);
         }
-       
     }
 }
 
@@ -435,10 +434,6 @@ if (isset($_SESSION['reset_started_at']) && (time() - $_SESSION['reset_started_a
 <body>
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
-
-    <a href="../index.php" class="back-home">
-        <i class="bi bi-arrow-left"></i> Back to Home
-    </a>
 
     <div class="auth-card">
         <!-- Brand -->

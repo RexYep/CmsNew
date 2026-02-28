@@ -73,12 +73,6 @@ if (!empty($current_user['avatar_url'])) {
                 </a>
             </li>
             <li>
-                <a href="<?php echo SITE_URL; ?>admin/complaint_details.php" 
-                   class="<?php echo $current_page == 'complaint_details.php' && $current_dir == 'admin' ? 'active' : ''; ?>">
-                    <i class="bi bi-file-text"></i> Complaint Details
-                </a>
-            </li>
-            <li>
                 <a href="<?php echo SITE_URL; ?>admin/manage_users.php" 
                    class="<?php echo $current_page == 'manage_users.php' ? 'active' : ''; ?>">
                     <i class="bi bi-people"></i> Manage Users
@@ -154,12 +148,6 @@ if (!empty($current_user['avatar_url'])) {
                 <a href="<?php echo SITE_URL; ?>user/my_complaints.php" 
                    class="<?php echo $current_page == 'my_complaints.php' ? 'active' : ''; ?>">
                     <i class="bi bi-list-ul"></i> My Complaints
-                </a>
-            </li>
-            <li>
-                <a href="<?php echo SITE_URL; ?>user/complaint_details.php" 
-                   class="<?php echo $current_page == 'complaint_details.php' && $current_dir == 'user' ? 'active' : ''; ?>">
-                    <i class="bi bi-eye"></i> View Details
                 </a>
             </li>
             <li>
