@@ -9,9 +9,6 @@ require_once '../includes/functions.php';
 require_once '../includes/security_helper.php';
 require_once '../includes/recaptcha_helper.php';
 
-if (!isset($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
 
 if (isLoggedIn()) {
     header("Location: ../user/index.php");
@@ -35,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_otp'])) {
         if (!$recaptcha['success']) {
             $error = $recaptcha['message'];
         }
-    } elseif (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+    } elseif (!isset($_POST['csrf_token']) || !validateCSRFToken($_POST['csrf_token'])) {
         $error = 'Invalid request. Please try again.';
    } else {
         $email = sanitizeInput($_POST['email']);
@@ -65,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_otp'])) {
 
 // Step 2 — Verify OTP
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verify_otp'])) {
-    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+    if (!isset($_POST['csrf_token']) || !validateCSRFToken($_POST['csrf_token'])) {
         $error = 'Invalid request. Please try again.';
         $step  = 2;
     } else {
@@ -90,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verify_otp'])) {
 
 // Step 3 — Reset Password
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password'])) {
-    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+    if (!isset($_POST['csrf_token']) || !validateCSRFToken($_POST['csrf_token'])) {
         $error = 'Invalid request. Please try again.';
         $step  = 1;
     } elseif (!isset($_SESSION['otp_verified']) || $_SESSION['otp_verified'] !== true) {

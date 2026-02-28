@@ -2,5 +2,8 @@
     "require": {
         "phpmailer/phpmailer": "^7.0",
         "cloudinary/cloudinary_php": "^3.1"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.94"
     }
 }

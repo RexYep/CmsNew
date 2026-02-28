@@ -35,7 +35,7 @@ $filter = isset($_GET['filter']) ? sanitizeInput($_GET['filter']) : 'all';
 $where_clause = "user_id = $user_id";
 if ($filter == 'unread') {
     $where_clause .= " AND is_read = 0";
-} else if ($filter == 'read') {
+} elseif ($filter == 'read') {
     $where_clause .= " AND is_read = 1";
 }
 
@@ -98,7 +98,7 @@ include '../includes/navbar.php';
             <?php
             // Parse metadata if exists
             $metadata = !empty($notif['metadata']) ? json_decode($notif['metadata'], true) : [];
-            
+
             // Get action URL
             $action_url = $notif['action_url'];
             if (!$action_url && $notif['complaint_id']) {
@@ -114,10 +114,16 @@ include '../includes/navbar.php';
                         <div class="d-flex align-items-center mb-2">
                             <?php
                             $icon_class = 'bi-info-circle-fill text-info';
-                            if ($notif['type'] == 'success') $icon_class = 'bi-check-circle-fill text-success';
-                            if ($notif['type'] == 'warning') $icon_class = 'bi-exclamation-triangle-fill text-warning';
-                            if ($notif['type'] == 'danger') $icon_class = 'bi-x-circle-fill text-danger';
-                            ?>
+            if ($notif['type'] == 'success') {
+                $icon_class = 'bi-check-circle-fill text-success';
+            }
+            if ($notif['type'] == 'warning') {
+                $icon_class = 'bi-exclamation-triangle-fill text-warning';
+            }
+            if ($notif['type'] == 'danger') {
+                $icon_class = 'bi-x-circle-fill text-danger';
+            }
+            ?>
                             <i class="bi <?php echo $icon_class; ?> fs-4 me-2"></i>
                             <h5 class="mb-0"><?php echo htmlspecialchars($notif['title']); ?></h5>
                         </div>
@@ -185,7 +191,7 @@ include '../includes/navbar.php';
                     </div>
                 <?php endif; ?>
             </div>
-        </div>
+            </div>
     </div>
 </div>
 
