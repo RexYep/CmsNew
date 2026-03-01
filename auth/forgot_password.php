@@ -23,8 +23,8 @@ $otp_verified = false;
 // Step 1 — Send OTP
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_otp'])) {
 
-    // CSRF check
-    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+    // FIX #2: Consistent CSRF validation using validateCSRFToken() (same as Step 2 & 3)
+    if (!isset($_POST['csrf_token']) || !validateCSRFToken($_POST['csrf_token'])) {
         $error = 'Invalid request. Please try again.';
     } else {
         // Simple honeypot (field check only, no time-based validation)
@@ -38,26 +38,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_otp'])) {
             } else {
                 recordRateLimitAttempt('forgot_password');
 
-                $email = sanitizeInput($_POST['email']);
+                // FIX #3: reCAPTCHA server-side validation
+                if (isRecaptchaConfigured()) {
+                    $recaptcha = validateRecaptchaFromPost(0.5);
+                    if (!$recaptcha['success']) {
+                        $error = 'Security verification failed. Please try again.';
+                    }
+                }
 
-                // Pre-check — block admin emails
-                $stmt = $conn->prepare("SELECT role FROM users WHERE email = ?");
-                $stmt->bind_param("s", $email);
-                $stmt->execute();
-                $row = $stmt->get_result()->fetch_assoc();
+                if (empty($error)) {
+                    $email = sanitizeInput($_POST['email']);
 
-                if ($row && $row['role'] === ROLE_ADMIN) {
-                    $error = 'No account found with that email address.';
-                } else {
-                    $result = createPasswordResetRequest($email);
-                    if ($result['success']) {
-                        $_SESSION['reset_email']      = $email;
-                        $_SESSION['reset_token']      = $result['token'];
-                        $_SESSION['reset_started_at'] = time();
-                        $success = $result['message'];
-                        $step    = 2;
+                    // Pre-check — block admin emails
+                    $stmt = $conn->prepare("SELECT role FROM users WHERE email = ?");
+                    $stmt->bind_param("s", $email);
+                    $stmt->execute();
+                    $row = $stmt->get_result()->fetch_assoc();
+
+                    if ($row && $row['role'] === ROLE_ADMIN) {
+                        $error = 'No account found with that email address.';
                     } else {
-                        $error = $result['message'];
+                        $result = createPasswordResetRequest($email);
+                        if ($result['success']) {
+                            $_SESSION['reset_email']      = $email;
+                            $_SESSION['reset_token']      = $result['token'];
+                            $_SESSION['reset_started_at'] = time();
+                            $success = $result['message'];
+                            $step    = 2;
+                        } else {
+                            $error = $result['message'];
+                        }
                     }
                 }
             }
@@ -501,15 +511,17 @@ if (isset($_SESSION['reset_started_at']) && (time() - $_SESSION['reset_started_a
         <?php endif; ?>
 
         <!-- STEP 1: Email -->
-       <?php if ($step === 1): ?>
-         <form method="POST" data-recaptcha="forgot_password">
+        <?php if ($step === 1): ?>
+        <form method="POST" data-recaptcha="forgot_password">
             <?php formProtection(); ?>
+            <?php /* FIX #1: Hidden field preserves send_otp when JS calls form.submit() */ ?>
+            <input type="hidden" name="send_otp" value="1">
             <label class="form-label">Registered Email Address</label>
             <div class="input-wrap">
                 <i class="bi bi-envelope input-icon"></i>
                 <input type="email" class="form-control" name="email" required placeholder="you@email.com">
             </div>
-            <button type="submit" name="send_otp" class="btn-submit">
+            <button type="submit" name="send_otp" value="1" class="btn-submit">
                 <i class="bi bi-send-fill"></i> Send OTP Code
             </button>
             <?php if (isRecaptchaConfigured()) {
