@@ -22,7 +22,7 @@ $otp_verified = false;
 
 // Step 1 — Send OTP
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_otp'])) {
-    
+
     // Validate protections
     $validation = validateFormProtection('forgot_password', 3, 300); // 3 per 5 min
     if (!$validation['valid']) {
@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_otp'])) {
         }
     } elseif (!isset($_POST['csrf_token']) || !validateCSRFToken($_POST['csrf_token'])) {
         $error = 'Invalid request. Please try again.';
-   } else {
+    } else {
         $email = sanitizeInput($_POST['email']);
 
         // Pre-check — block admin emails from user forgot password page
@@ -81,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verify_otp'])) {
             $otp_verified = false;
             unset($_SESSION['reset_token'], $_SESSION['otp_verified']);
         }
-       
+
     }
 }
 
@@ -117,7 +117,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password'])) {
 }
 
 // Restore step from session
-if (isset($_SESSION['reset_email']) && !isset($_POST['send_otp'])) $step = 2;
+if (isset($_SESSION['reset_email']) && !isset($_POST['send_otp'])) {
+    $step = 2;
+}
 if (isset($_SESSION['otp_verified']) && $_SESSION['otp_verified'] === true && isset($_SESSION['reset_token'])) {
     $step         = 3;
     $otp_verified = true;
@@ -496,7 +498,6 @@ if (isset($_SESSION['reset_started_at']) && (time() - $_SESSION['reset_started_a
         <!-- STEP 1: Email -->
         <?php if ($step === 1): ?>
        <form method="POST" data-recaptcha="forgot_password">
-            <?php formProtection(); ?>
             <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
             <label class="form-label">Registered Email Address</label>
             <div class="input-wrap">
@@ -506,7 +507,9 @@ if (isset($_SESSION['reset_started_at']) && (time() - $_SESSION['reset_started_a
             <button type="submit" name="send_otp" class="btn-submit">
                 <i class="bi bi-send-fill"></i> Send OTP Code
             </button>
-            <?php if (isRecaptchaConfigured()) echo displayRecaptchaBadge(); ?>
+            <?php if (isRecaptchaConfigured()) {
+                echo displayRecaptchaBadge();
+            } ?>
         </form>
 
         <!-- STEP 2: OTP -->
@@ -519,7 +522,7 @@ if (isset($_SESSION['reset_started_at']) && (time() - $_SESSION['reset_started_a
             </div>
         </div>
         <form method="POST">
-            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+           <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
             <label class="form-label">Enter 6-Digit OTP</label>
             <div class="input-wrap">
                 <i class="bi bi-key input-icon"></i>
@@ -547,8 +550,7 @@ if (isset($_SESSION['reset_started_at']) && (time() - $_SESSION['reset_started_a
             </a>
         <?php else: ?>
         <form method="POST">
-            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
-
+            <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
             <label class="form-label">New Password</label>
             <div class="input-wrap">
                 <i class="bi bi-lock input-icon"></i>

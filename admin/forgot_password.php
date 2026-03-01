@@ -492,7 +492,6 @@ if (isset($_SESSION['reset_started_at']) && (time() - $_SESSION['reset_started_a
         <!-- STEP 1: Email -->
         <?php if ($step === 1): ?>
        <form method="POST" data-recaptcha="forgot_password">
-            <?php formProtection(); ?>
             <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
             <label class="form-label">Registered Email Address</label>
             <div class="input-wrap">
@@ -517,7 +516,7 @@ if (isset($_SESSION['reset_started_at']) && (time() - $_SESSION['reset_started_a
             </div>
         </div>
         <form method="POST">
-            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+           <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
             <label class="form-label">Enter 6-Digit OTP</label>
             <div class="input-wrap">
                 <i class="bi bi-key input-icon"></i>
@@ -545,8 +544,7 @@ if (isset($_SESSION['reset_started_at']) && (time() - $_SESSION['reset_started_a
             </a>
         <?php else: ?>
         <form method="POST">
-            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
-
+           <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">>
             <label class="form-label">New Password</label>
             <div class="input-wrap">
                 <i class="bi bi-lock input-icon"></i>
