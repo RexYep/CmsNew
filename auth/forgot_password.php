@@ -26,6 +26,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_otp'])) {
     $validation = validateFormProtection('forgot_password', 3, 300);
     if (!$validation['valid']) {
         $error = implode('<br>', $validation['errors']);
+        error_log("=== FORGOT PASSWORD VALIDATION FAILED ===");
+        error_log("Errors: " . print_r($validation['errors'], true));
+        error_log("POST data: " . print_r($_POST, true));
     } else {
         // reCAPTCHA check — separate if, hindi elseif
         if (isRecaptchaConfigured()) {
