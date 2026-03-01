@@ -22,19 +22,49 @@ $otp_verified = false;
 
 // Step 1 — Send OTP
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_otp'])) {
-    $email = trim($_POST['email']);
 
-    // Just try to send email - no validations
-    $result = createPasswordResetRequest($email);
-
-    if ($result['success']) {
-        $_SESSION['reset_email'] = $email;
-        $success = "OTP sent! Check logs for details.";
-        $step = 2;
+    // CSRF check
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        $error = 'Invalid request. Please try again.';
     } else {
-        $error = $result['message'];
+        // Simple honeypot (field check only, no time-based validation)
+        if (!empty($_POST['website_url'])) {
+            $error = 'Spam detected. Please try again.';
+        } else {
+            // Rate limit check
+            $rate_check = checkRateLimit('forgot_password', 3, 300); // 3 per 5 min
+            if (!$rate_check['allowed']) {
+                $error = $rate_check['message'];
+            } else {
+                recordRateLimitAttempt('forgot_password');
+
+                $email = sanitizeInput($_POST['email']);
+
+                // Pre-check — block admin emails
+                $stmt = $conn->prepare("SELECT role FROM users WHERE email = ?");
+                $stmt->bind_param("s", $email);
+                $stmt->execute();
+                $row = $stmt->get_result()->fetch_assoc();
+
+                if ($row && $row['role'] === ROLE_ADMIN) {
+                    $error = 'No account found with that email address.';
+                } else {
+                    $result = createPasswordResetRequest($email);
+                    if ($result['success']) {
+                        $_SESSION['reset_email']      = $email;
+                        $_SESSION['reset_token']      = $result['token'];
+                        $_SESSION['reset_started_at'] = time();
+                        $success = $result['message'];
+                        $step    = 2;
+                    } else {
+                        $error = $result['message'];
+                    }
+                }
+            }
+        }
     }
 }
+
 // Step 2 — Verify OTP
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verify_otp'])) {
     if (!isset($_POST['csrf_token']) || !validateCSRFToken($_POST['csrf_token'])) {
@@ -471,13 +501,21 @@ if (isset($_SESSION['reset_started_at']) && (time() - $_SESSION['reset_started_a
         <?php endif; ?>
 
         <!-- STEP 1: Email -->
-        <?php if ($step === 1): ?>
-   <form method="POST">
-    <!-- No formProtection(), no data-recaptcha -->
-    <label class="form-label">Email</label>
-    <input type="email" name="email" required>
-    <button type="submit" name="send_otp">Send OTP</button>
-    </form>
+       <?php if ($step === 1): ?>
+         <form method="POST" data-recaptcha="forgot_password">
+            <?php formProtection(); ?>
+            <label class="form-label">Registered Email Address</label>
+            <div class="input-wrap">
+                <i class="bi bi-envelope input-icon"></i>
+                <input type="email" class="form-control" name="email" required placeholder="you@email.com">
+            </div>
+            <button type="submit" name="send_otp" class="btn-submit">
+                <i class="bi bi-send-fill"></i> Send OTP Code
+            </button>
+            <?php if (isRecaptchaConfigured()) {
+                echo displayRecaptchaBadge();
+            } ?>
+        </form>
 
         <!-- STEP 2: OTP -->
         <?php elseif ($step === 2): ?>

@@ -1,7 +1,7 @@
 <?php
 // ============================================
-// ADMIN LOGIN PAGE
-// admin/login.php
+// LOGIN PAGE
+// auth/login.php
 // ============================================
 
 require_once '../config/config.php';
@@ -9,16 +9,8 @@ require_once '../includes/functions.php';
 require_once '../includes/security_helper.php';
 require_once '../includes/recaptcha_helper.php';
 
-// If already logged in as admin, redirect to dashboard
 if (isLoggedIn()) {
-    if (isAdmin()) {
-        header("Location: index.php");
-    } else {
-        // Logged in but as user — boot them out
-        session_unset();
-        session_destroy();
-        header("Location: login.php");
-    }
+    header("Location: ../user/index.php");
     exit();
 }
 
@@ -26,35 +18,43 @@ $error   = '';
 $success = '';
 $result  = [];
 
+if (isset($_GET['deleted']) && $_GET['deleted'] == 1) {
+    $success = 'Your account has been permanently deleted. You can create a new account if you wish to return.';
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $validation = validateFormProtection('admin_login', 5, 60);
+    // ========== SPAM PROTECTION START ==========
+    // Validate honeypot, CSRF, and rate limiting
+    $validation = validateFormProtection('login', 5, 60); // 5 attempts per 60 seconds
 
     if (!$validation['valid']) {
         $error = implode('<br>', $validation['errors']);
     } else {
+        // Validate reCAPTCHA (if configured)
         if (isRecaptchaConfigured()) {
-            $recaptcha = validateRecaptchaFromPost(0.5);
+            $recaptcha = validateRecaptchaFromPost(0.5); // Score threshold: 0.5
             if (!$recaptcha['success']) {
                 $error = $recaptcha['message'];
             }
         }
 
-       if (empty($error)) {
+        // If all validations passed,proceed with login
+        if (empty($error)) {
             $email    = sanitizeInput($_POST['email']);
             $password = $_POST['password'];
 
-            // Pre-check role BEFORE calling loginUser()
+
             $stmt = $conn->prepare("SELECT role FROM users WHERE email = ?");
             $stmt->bind_param("s", $email);
             $stmt->execute();
             $row = $stmt->get_result()->fetch_assoc();
 
-           if ($row && $row['role'] !== ROLE_ADMIN) {
-    $error = 'Invalid credentials.';
-    }       else {
-                 $result = loginUser($email, $password);
+            if ($row && $row['role'] === ROLE_ADMIN) {
+                $error = 'This portal is for users only.';
+            } else {
+                $result = loginUser($email, $password);
                 if ($result['success']) {
-                    header("Location: index.php");
+                    header("Location: ../user/index.php");
                     exit();
                 } else {
                     $error = $result['message'];
@@ -62,6 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
+    // ========== SPAM PROTECTION END ==========
 }
 ?>
 <!DOCTYPE html>
@@ -69,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Login — <?php echo SITE_NAME; ?></title>
+    <title>Login — <?php echo SITE_NAME; ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
@@ -84,9 +85,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             --muted:  #8fa3b8;
             --border: rgba(0,194,224,0.15);
             --card:   #111e2e;
-            /* Admin accent — slightly different tint para distinct */
-            --admin-accent: rgba(247,37,133,0.15);
-            --admin-border: rgba(247,37,133,0.25);
         }
 
         *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
@@ -103,6 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             overflow-x: hidden;
         }
 
+        /* Background grid */
         body::before {
             content: '';
             position: fixed;
@@ -114,6 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             pointer-events: none;
         }
 
+        /* Glow orbs */
         .orb {
             position: fixed;
             border-radius: 50%;
@@ -123,22 +123,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         .orb-1 {
             width: 400px; height: 400px;
-            background: radial-gradient(circle, rgba(247,37,133,0.1) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(0,194,224,0.12) 0%, transparent 70%);
             top: -100px; right: -100px;
         }
         .orb-2 {
             width: 300px; height: 300px;
-            background: radial-gradient(circle, rgba(0,194,224,0.08) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(247,37,133,0.07) 0%, transparent 70%);
             bottom: -80px; left: -80px;
         }
 
+        /* Card */
         .auth-card {
             background: var(--card);
             border: 1px solid var(--border);
             border-radius: 24px;
             padding: 44px 40px;
             width: 100%;
-            max-width: 420px;
+            max-width: 440px;
             position: relative;
             z-index: 1;
             box-shadow: 0 30px 80px rgba(0,0,0,0.5);
@@ -150,32 +151,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             to   { opacity:1; transform: translateY(0); }
         }
 
-        /* Admin accent line — pink/magenta instead of cyan */
+        /* Top accent line */
         .auth-card::before {
             content: '';
             position: absolute;
             top: 0; left: 10%; right: 10%;
             height: 2px;
-            background: linear-gradient(90deg, transparent, #f72585, transparent);
+            background: linear-gradient(90deg, transparent, var(--cyan), transparent);
             border-radius: 2px;
         }
 
+        /* Brand */
         .auth-brand {
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
-            margin-bottom: 8px;
+            margin-bottom: 32px;
             text-decoration: none;
         }
 
         .brand-icon {
             width: 40px; height: 40px;
-            background: linear-gradient(135deg, #f72585, #b5179e);
+            background: linear-gradient(135deg, var(--cyan), var(--cyan-2));
             border-radius: 12px;
             display: flex; align-items: center; justify-content: center;
             font-size: 1.1rem;
-            color: #fff;
+            color: var(--navy);
         }
 
         .brand-text {
@@ -184,27 +186,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-size: 1.2rem;
             color: #fff;
         }
-        .brand-text span { color: #f72585; }
 
-        /* Admin badge below brand */
-        .admin-badge {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 28px;
-        }
-        .admin-badge span {
-            background: var(--admin-accent);
-            border: 1px solid var(--admin-border);
-            color: #f72585;
-            font-size: 0.72rem;
-            font-weight: 700;
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-            padding: 4px 12px;
-            border-radius: 50px;
-        }
+        .brand-text span { color: var(--cyan); }
 
+        /* Header */
         .auth-header { text-align: center; margin-bottom: 32px; }
+
         .auth-header h1 {
             font-family: 'Sora', sans-serif;
             font-weight: 700;
@@ -212,8 +199,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: #fff;
             margin-bottom: 6px;
         }
-        .auth-header p { font-size: 0.9rem; color: var(--muted); }
 
+        .auth-header p {
+            font-size: 0.9rem;
+            color: var(--muted);
+        }
+
+        /* Form */
         .form-label {
             font-size: 0.82rem;
             font-weight: 600;
@@ -236,7 +228,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-size: 1rem;
             pointer-events: none;
             z-index: 2;
-            transition: color 0.2s;
         }
 
         .form-control {
@@ -250,17 +241,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             transition: all 0.2s;
             font-family: 'DM Sans', sans-serif;
         }
+
         .form-control::placeholder { color: var(--muted); opacity: 0.7; }
+
         .form-control:focus {
             outline: none;
-            border-color: #f72585;
+            border-color: var(--cyan);
             background: var(--navy-3);
             color: #fff;
-            box-shadow: 0 0 0 3px rgba(247,37,133,0.1);
+            box-shadow: 0 0 0 3px rgba(0,194,224,0.12);
         }
-        .input-wrap:focus-within .input-icon { color: #f72585; }
-        .form-control.has-toggle { padding-right: 42px; }
 
+        .form-control:focus + .input-icon,
+        .input-wrap:focus-within .input-icon { color: var(--cyan); }
+
+        /* Password toggle */
         .pass-toggle {
             position: absolute;
             right: 14px;
@@ -275,13 +270,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             z-index: 2;
             transition: color 0.2s;
         }
-        .pass-toggle:hover { color: #f72585; }
+        .pass-toggle:hover { color: var(--cyan); }
 
+        .form-control.has-toggle { padding-right: 42px; }
+
+        /* Remember + forgot row */
         .form-meta {
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 24px;
             margin-top: -4px;
+        }
+
+        .form-check-input {
+            background-color: var(--navy-2);
+            border-color: var(--border);
+            width: 16px; height: 16px;
+        }
+
+        .form-check-input:checked {
+            background-color: var(--cyan);
+            border-color: var(--cyan);
+        }
+
+        .form-check-label {
+            font-size: 0.83rem;
+            color: var(--muted);
+            cursor: pointer;
         }
 
         .forgot-link {
@@ -292,11 +308,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         .forgot-link:hover { color: var(--cyan-2); }
 
+        /* Submit button */
         .btn-submit {
             width: 100%;
             padding: 13px;
-            background: linear-gradient(135deg, #f72585, #b5179e);
-            color: #fff;
+            background: var(--cyan);
+            color: var(--navy);
             font-family: 'Sora', sans-serif;
             font-weight: 700;
             font-size: 0.95rem;
@@ -309,12 +326,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             justify-content: center;
             gap: 8px;
         }
+
         .btn-submit:hover {
+            background: var(--cyan-2);
             transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(247,37,133,0.35);
+            box-shadow: 0 10px 30px rgba(0,194,224,0.35);
         }
+
         .btn-submit:active { transform: translateY(0); }
 
+        /* Divider */
+        .auth-divider {
+            text-align: center;
+            margin: 24px 0;
+            position: relative;
+        }
+
+        .auth-divider::before {
+            content: '';
+            position: absolute;
+            top: 50%; left: 0; right: 0;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .auth-divider span {
+            position: relative;
+            background: var(--card);
+            padding: 0 12px;
+            font-size: 0.78rem;
+            color: var(--muted);
+        }
+
+        /* Footer link */
+        .auth-footer {
+            text-align: center;
+            font-size: 0.87rem;
+            color: var(--muted);
+        }
+
+        .auth-footer a {
+            color: var(--cyan);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+        .auth-footer a:hover { color: var(--cyan-2); }
+
+        /* Back to home */
+        .back-home {
+            position: fixed;
+            top: 20px; left: 20px;
+            display: flex; align-items: center; gap: 7px;
+            font-size: 0.83rem;
+            color: var(--muted);
+            text-decoration: none;
+            transition: color 0.2s;
+            z-index: 10;
+            background: rgba(13,27,42,0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            padding: 7px 14px;
+            border-radius: 50px;
+        }
+        .back-home:hover { color: var(--cyan); border-color: rgba(0,194,224,0.3); }
+
+        /* Alerts */
         .alert-custom {
             border-radius: 12px;
             padding: 13px 16px;
@@ -325,55 +402,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             align-items: flex-start;
             gap: 10px;
         }
+
         .alert-error {
             background: rgba(220,53,69,0.1);
             border-color: rgba(220,53,69,0.25);
             color: #f8a5ae;
         }
+
+        .alert-success {
+            background: rgba(39,201,63,0.1);
+            border-color: rgba(39,201,63,0.25);
+            color: #86efac;
+        }
+
         .alert-custom i { flex-shrink: 0; margin-top: 2px; }
+
         .alert-link-custom { color: inherit; text-decoration: underline; opacity: 0.85; }
 
-        /* Security notice at bottom */
-        .security-notice {
-            margin-top: 24px;
-            padding: 10px 14px;
-            background: rgba(247,37,133,0.06);
-            border: 1px solid rgba(247,37,133,0.15);
-            border-radius: 10px;
-            display: flex;
-            gap: 8px;
-            align-items: flex-start;
-            font-size: 0.78rem;
-            color: var(--muted);
-        }
-        .security-notice i { color: #f72585; flex-shrink: 0; margin-top: 2px; }
-
+        /* Responsive */
         @media (max-width: 480px) {
             .auth-card { padding: 32px 24px; border-radius: 20px; }
             .auth-header h1 { font-size: 1.4rem; }
         }
+
+
     </style>
 </head>
 <body>
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
 
+    <a href="../index.php" class="back-home">
+        <i class="bi bi-arrow-left"></i> Back to Home
+    </a>
+
     <div class="auth-card">
         <!-- Brand -->
         <a href="../index.php" class="auth-brand">
-            <div class="brand-icon"><i class="bi bi-shield-lock-fill"></i></div>
+            <div class="brand-icon"><i class="bi bi-clipboard2-check-fill"></i></div>
             <span class="brand-text">CMS<span>.</span></span>
         </a>
 
-        <!-- Admin Badge -->
-        <div class="admin-badge">
-            <span><i class="bi bi-shield-fill me-1"></i> Admin Portal</span>
-        </div>
-
         <!-- Header -->
         <div class="auth-header">
-            <h1>Admin Access</h1>
-            <p>Restricted to authorized personnel only</p>
+            <h1>Welcome Back</h1>
+            <p>Login to <?php echo SITE_NAME; ?></p>
         </div>
 
         <!-- Alerts -->
@@ -392,16 +465,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </div>
 <?php endif; ?>
 
-        <!-- Form -->
-        <form method="POST" action="" data-recaptcha="admin_login">
-            <?php formProtection(); ?>
+        <?php if (!empty($success)): ?>
+        <div class="alert-custom alert-success">
+            <i class="bi bi-check-circle-fill"></i>
+            <div><?php echo $success; ?></div>
+        </div>
+        <?php endif; ?>
 
+        <!-- Form -->
+    <form method="POST" action="" data-recaptcha="login">
+         <?php formProtection(); ?>
             <!-- Email -->
             <label class="form-label">Email Address</label>
             <div class="input-wrap">
                 <i class="bi bi-envelope input-icon"></i>
                 <input type="email" class="form-control" name="email" required
-                       placeholder="admin@email.com"
+                       placeholder="you@email.com"
                        value="<?php echo isset($email) ? htmlspecialchars($email) : ''; ?>">
             </div>
 
@@ -416,21 +495,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </button>
             </div>
 
+            <!-- Remember + Forgot -->
             <div class="form-meta">
-               <a href="forgot_password.php" 
-                class="forgot-link">Forgot password?</a>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="remember" name="remember">
+                    <label class="form-check-label" for="remember">Remember me</label>
+                </div>
+                <a href="forgot_password.php" class="forgot-link">Forgot password?</a>
             </div>
 
             <button type="submit" class="btn-submit">
-                <i class="bi bi-shield-lock"></i> Login
+                <i class="bi bi-box-arrow-in-right"></i> Login
             </button>
-            <?php if (isRecaptchaConfigured()) echo displayRecaptchaBadge(); ?>
+            <?php if (isRecaptchaConfigured()) {
+                echo displayRecaptchaBadge();
+            } ?>
         </form>
 
-        <!-- Security Notice -->
-        <div class="security-notice">
-            <i class="bi bi-info-circle-fill"></i>
-            <span>This is a restricted area. Unauthorized access attempts are logged and monitored.</span>
+        <div class="auth-divider"><span>or</span></div>
+
+        <div class="auth-footer">
+            Don't have an account? <a href="register.php">Sign up here</a>
         </div>
     </div>
 
@@ -447,5 +532,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         });
     </script>
 </body>
-
 </html>
