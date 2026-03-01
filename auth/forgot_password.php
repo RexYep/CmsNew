@@ -22,44 +22,18 @@ $otp_verified = false;
 
 // Step 1 — Send OTP
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_otp'])) {
-
-    // Validate protections
-    $validation = validateFormProtection('forgot_password', 3, 300); // 3 per 5 min
-    if (!$validation['valid']) {
-        $error = implode('<br>', $validation['errors']);
-    } elseif (isRecaptchaConfigured()) {
-        $recaptcha = validateRecaptchaFromPost(0.5);
-        if (!$recaptcha['success']) {
-            $error = $recaptcha['message'];
-        }
-    } elseif (!isset($_POST['csrf_token']) || !validateCSRFToken($_POST['csrf_token'])) {
-        $error = 'Invalid request. Please try again.';
+    $email  = sanitizeInput($_POST['email']);
+    $result = createPasswordResetRequest($email);
+    if ($result['success']) {
+        $_SESSION['reset_email']      = $email;
+        $_SESSION['reset_token']      = $result['token'];
+        $_SESSION['reset_started_at'] = time();
+        $success = $result['message'];
+        $step    = 2;
     } else {
-        $email = sanitizeInput($_POST['email']);
-
-        // Pre-check — block admin emails from user forgot password page
-        $stmt = $conn->prepare("SELECT role FROM users WHERE email = ?");
-        $stmt->bind_param("s", $email);
-        $stmt->execute();
-        $row = $stmt->get_result()->fetch_assoc();
-
-        if ($row && $row['role'] === ROLE_ADMIN) {
-            $error = 'No account found with that email address.';
-        } else {
-            $result = createPasswordResetRequest($email);
-            if ($result['success']) {
-                $_SESSION['reset_email']      = $email;
-                $_SESSION['reset_token']      = $result['token'];
-                $_SESSION['reset_started_at'] = time();
-                $success = $result['message'];
-                $step    = 2;
-            } else {
-                $error = $result['message'];
-            }
-        }
+        $error = $result['message'];
     }
 }
-
 // Step 2 — Verify OTP
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verify_otp'])) {
     if (!isset($_POST['csrf_token']) || !validateCSRFToken($_POST['csrf_token'])) {
