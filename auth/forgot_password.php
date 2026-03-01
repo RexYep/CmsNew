@@ -498,8 +498,8 @@ if (isset($_SESSION['reset_started_at']) && (time() - $_SESSION['reset_started_a
 
         <!-- STEP 1: Email -->
         <?php if ($step === 1): ?>
-       <form method="POST" data-recaptcha="forgot_password">
-            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+    <form method="POST" data-recaptcha="forgot_password">
+            <?php formProtection(); ?>
             <label class="form-label">Registered Email Address</label>
             <div class="input-wrap">
                 <i class="bi bi-envelope input-icon"></i>

@@ -21,16 +21,43 @@ $otp_verified = false;
 
 // Step 1 — Send OTP
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_otp'])) {
-    $email  = sanitizeInput($_POST['email']);
-    $result = createPasswordResetRequest($email);
-    if ($result['success']) {
-        $_SESSION['reset_email']      = $email;
-        $_SESSION['reset_token']      = $result['token'];
-        $_SESSION['reset_started_at'] = time();
-        $success = $result['message'];
-        $step    = 2;
+
+    $validation = validateFormProtection('forgot_password', 3, 300);
+    if (!$validation['valid']) {
+        $error = implode('<br>', $validation['errors']);
     } else {
-        $error = $result['message'];
+        // reCAPTCHA check — separate if, hindi elseif
+        if (isRecaptchaConfigured()) {
+            $recaptcha = validateRecaptchaFromPost(0.5);
+            if (!$recaptcha['success']) {
+                $error = $recaptcha['message'];
+            }
+        }
+
+        if (empty($error)) {
+            $email = sanitizeInput($_POST['email']);
+
+            // Pre-check — block admin emails
+            $stmt = $conn->prepare("SELECT role FROM users WHERE email = ?");
+            $stmt->bind_param("s", $email);
+            $stmt->execute();
+            $row = $stmt->get_result()->fetch_assoc();
+
+            if ($row && $row['role'] === ROLE_ADMIN) {
+                $error = 'No account found with that email address.';
+            } else {
+                $result = createPasswordResetRequest($email);
+                if ($result['success']) {
+                    $_SESSION['reset_email']      = $email;
+                    $_SESSION['reset_token']      = $result['token'];
+                    $_SESSION['reset_started_at'] = time();
+                    $success = $result['message'];
+                    $step    = 2;
+                } else {
+                    $error = $result['message'];
+                }
+            }
+        }
     }
 }
 
@@ -466,8 +493,8 @@ if (isset($_SESSION['reset_started_at']) && (time() - $_SESSION['reset_started_a
 
         <!-- STEP 1: Email -->
         <?php if ($step === 1): ?>
-       <form method="POST" data-recaptcha="forgot_password">
-            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+         <form method="POST" data-recaptcha="forgot_password">
+            <?php formProtection(); ?>
             <label class="form-label">Registered Email Address</label>
             <div class="input-wrap">
                 <i class="bi bi-envelope input-icon"></i>
