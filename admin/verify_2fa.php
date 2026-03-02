@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verify_code'])) {
             saveTrustedDevice($user_id);
         }
 
-        header("Location: ../user/index.php");
+        header("Location: index.php");
         exit();
 
     } elseif (!empty($result['max_reached'])) {
