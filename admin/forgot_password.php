@@ -1,7 +1,7 @@
 <?php
 // ============================================
 // FORGOT PASSWORD PAGE
-// auth/forgot_password.php
+// admin/forgot_password.php
 // ============================================
 
 require_once '../config/config.php';
@@ -10,7 +10,7 @@ require_once '../includes/security_helper.php';
 require_once '../includes/recaptcha_helper.php';
 
 if (isLoggedIn()) {
-    header("Location: ../user/index.php");
+    header("Location: index.php");
     exit();
 }
 
@@ -22,8 +22,8 @@ $otp_verified = false;
 // Step 1 — Send OTP
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_otp'])) {
 
-    // CSRF check
-    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+
+    if (!isset($_POST['csrf_token']) || !validateCSRFToken($_POST['csrf_token'])) {
         $error = 'Invalid request. Please try again.';
     } else {
         // Simple honeypot (field check only, no time-based validation)
@@ -31,32 +31,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_otp'])) {
             $error = 'Spam detected. Please try again.';
         } else {
             // Rate limit check
-            $rate_check = checkRateLimit('forgot_password', 3, 300); // 3 per 5 min
+            $rate_check = checkRateLimit('forgot_password', 2, 600); // 2 per 10 min
             if (!$rate_check['allowed']) {
                 $error = $rate_check['message'];
             } else {
                 recordRateLimitAttempt('forgot_password');
 
-                $email = sanitizeInput($_POST['email']);
+                // FIX #3: reCAPTCHA server-side validation
+                if (isRecaptchaConfigured()) {
+                    $recaptcha = validateRecaptchaFromPost(0.5);
+                    if (!$recaptcha['success']) {
+                        $error = 'Security verification failed. Please try again.';
+                    }
+                }
 
-                // Pre-check — block admin emails
-                $stmt = $conn->prepare("SELECT role FROM users WHERE email = ?");
-                $stmt->bind_param("s", $email);
-                $stmt->execute();
-                $row = $stmt->get_result()->fetch_assoc();
+                if (empty($error)) {
+                    $email = sanitizeInput($_POST['email']);
 
-                if ($row && $row['role'] === ROLE_ADMIN) {
-                    $error = 'No account found with that email address.';
-                } else {
-                    $result = createPasswordResetRequest($email);
-                    if ($result['success']) {
-                        $_SESSION['reset_email']      = $email;
-                        $_SESSION['reset_token']      = $result['token'];
-                        $_SESSION['reset_started_at'] = time();
-                        $success = $result['message'];
-                        $step    = 2;
+                    // Pre-check — block admin emails
+                    $stmt = $conn->prepare("SELECT role FROM users WHERE email = ?");
+                    $stmt->bind_param("s", $email);
+                    $stmt->execute();
+                    $row = $stmt->get_result()->fetch_assoc();
+
+                    if ($row && $row['role'] !== ROLE_ADMIN) {
+                        $error = 'No account found with that email address.';
                     } else {
-                        $error = $result['message'];
+                        $result = createPasswordResetRequest($email);
+                        if ($result['success']) {
+                            $_SESSION['reset_email']      = $email;
+                            $_SESSION['reset_token']      = $result['token'];
+                            $_SESSION['reset_started_at'] = time();
+                            $success = $result['message'];
+                            $step    = 2;
+                        } else {
+                            $error = $result['message'];
+                        }
                     }
                 }
             }
@@ -72,8 +82,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verify_otp'])) {
     } else {
         $email  = $_SESSION['reset_email'] ?? '';
         $otp    = sanitizeInput($_POST['otp']);
-
         $result = verifyOTP($email, $otp);
+
         if ($result['success']) {
             $_SESSION['reset_token']  = $result['token'];
             $_SESSION['otp_verified'] = true;
@@ -85,12 +95,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verify_otp'])) {
             $otp_verified = false;
             unset($_SESSION['reset_token'], $_SESSION['otp_verified']);
         }
+
     }
 }
 
 // Step 3 — Reset Password
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password'])) {
-    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+    if (!isset($_POST['csrf_token']) || !validateCSRFToken($_POST['csrf_token'])) {
         $error = 'Invalid request. Please try again.';
         $step  = 1;
     } elseif (!isset($_SESSION['otp_verified']) || $_SESSION['otp_verified'] !== true) {
@@ -440,7 +451,7 @@ if (isset($_SESSION['reset_started_at']) && (time() - $_SESSION['reset_started_a
 
     <div class="auth-card">
         <!-- Brand -->
-        <a href="../index.php" class="auth-brand">
+        <a href="login.php" class="auth-brand">
             <div class="brand-icon"><i class="bi bi-clipboard2-check-fill"></i></div>
             <span class="brand-text">CMS<span>.</span></span>
         </a>

@@ -69,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     // Check if trusted device
                     if (isTrustedDevice($user_id)) {
-                        header("Location: ../user/index.php");
+                        header("Location: index.php");
                         exit();
                     }
 
@@ -484,9 +484,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
 
-    <a href="../index.php" class="back-home">
-        <i class="bi bi-arrow-left"></i> Back to Home
-    </a>
 
     <div class="auth-card">
         <!-- Brand -->
@@ -565,10 +562,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </form>
 
         <div class="auth-divider"><span>or</span></div>
-
-        <div class="auth-footer">
-            Don't have an account? <a href="register.php">Sign up here</a>
-        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
