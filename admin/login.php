@@ -53,10 +53,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = 'This portal is for users only.';
             } else {
                 $result = loginUser($email, $password);
-                if ($result['success']) {
-                    header("Location: ../user/index.php");
-                    exit();
-                } else {
+if ($result['success']) {
+    $user_id = $_SESSION['user_id'];
+
+    // Clean expired trusted devices
+    cleanExpiredDevices($user_id);
+
+    // Check if trusted device
+    if (isTrustedDevice($user_id)) {
+        header("Location: ../user/index.php");
+        exit();
+    }
+
+    // New device — generate and send 2FA code
+    $otp = generate2FACode($user_id);
+    if ($otp) {
+        $sent = send2FAEmail($_SESSION['email'], $_SESSION['full_name'], $otp);
+        if ($sent) {
+            // Store temp session for 2FA — remove full session until verified
+            $temp = [
+                'user_id'   => $_SESSION['user_id'],
+                'full_name' => $_SESSION['full_name'],
+                'email'     => $_SESSION['email'],
+                'role'      => $_SESSION['role'],
+            ];
+            if (isset($_SESSION['admin_level'])) {
+                $temp['admin_level'] = $_SESSION['admin_level'];
+            }
+            session_unset();
+            $_SESSION['2fa_user_id']    = $temp['user_id'];
+            $_SESSION['2fa_full_name']  = $temp['full_name'];
+            $_SESSION['2fa_email']      = $temp['email'];
+            $_SESSION['2fa_role']       = $temp['role'];
+            $_SESSION['2fa_started_at'] = time();
+            header("Location: verify_2fa.php");
+            exit();
+        }
+    }
+            // Fallback — if email fails, let them in (optional, pwede ding block)
+           header("Location: index.php");
+            exit();
+                    } else {
                     $error = $result['message'];
                 }
             }

@@ -23,7 +23,7 @@ $otp_verified = false;
 // Step 1 — Send OTP
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_otp'])) {
 
-    // FIX #2: Consistent CSRF validation using validateCSRFToken() (same as Step 2 & 3)
+
     if (!isset($_POST['csrf_token']) || !validateCSRFToken($_POST['csrf_token'])) {
         $error = 'Invalid request. Please try again.';
     } else {
@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_otp'])) {
             $error = 'Spam detected. Please try again.';
         } else {
             // Rate limit check
-            $rate_check = checkRateLimit('forgot_password', 3, 300); // 3 per 5 min
+            $rate_check = checkRateLimit('forgot_password', 2, 600); // 2 per 10 min
             if (!$rate_check['allowed']) {
                 $error = $rate_check['message'];
             } else {

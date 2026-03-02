@@ -2810,3 +2810,192 @@ function getApprovalStats($admin_id = null, $date_from = null, $date_to = null) 
     
     return $stats;
 }
+
+// ============================================
+// 2FA / TRUSTED DEVICE FUNCTIONS
+// ============================================
+
+function generateDeviceToken() {
+    return bin2hex(random_bytes(32));
+}
+
+function getBrowserInfo() {
+    $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+    // Simple browser detection
+    if (str_contains($ua, 'Chrome'))       return 'Chrome';
+    elseif (str_contains($ua, 'Firefox'))  return 'Firefox';
+    elseif (str_contains($ua, 'Safari'))   return 'Safari';
+    elseif (str_contains($ua, 'Edge'))     return 'Edge';
+    else                                   return 'Unknown';
+}
+
+function isTrustedDevice($user_id) {
+    global $conn;
+
+    $device_token = $_COOKIE['trusted_device'] ?? '';
+    if (empty($device_token)) return false;
+
+    $stmt = $conn->prepare("
+        SELECT id FROM trusted_devices 
+        WHERE user_id = ? AND device_token = ? AND expires_at > NOW()
+    ");
+    $stmt->bind_param("is", $user_id, $device_token);
+    $stmt->execute();
+
+    return $stmt->get_result()->num_rows > 0;
+}
+
+function saveTrustedDevice($user_id) {
+    global $conn;
+
+    $token      = generateDeviceToken();
+    $browser    = getBrowserInfo();
+    $ip         = getClientIP();
+    $expires_at = date('Y-m-d H:i:s', strtotime('+30 days'));
+    $expires_ts = strtotime('+30 days');
+
+    $stmt = $conn->prepare("
+        INSERT INTO trusted_devices (user_id, device_token, browser, ip_address, expires_at)
+        VALUES (?, ?, ?, ?, ?)
+    ");
+    $stmt->bind_param("issss", $user_id, $token, $browser, $ip, $expires_at);
+
+    if ($stmt->execute()) {
+        // Set cookie for 30 days
+        setcookie('trusted_device', $token, [
+            'expires'  => $expires_ts,
+            'path'     => '/',
+            'secure'   => true,
+            'httponly' => true,
+            'samesite' => 'Lax'
+        ]);
+        return true;
+    }
+    return false;
+}
+
+function cleanExpiredDevices($user_id) {
+    global $conn;
+    $stmt = $conn->prepare("DELETE FROM trusted_devices WHERE user_id = ? AND expires_at < NOW()");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+}
+
+function send2FAEmail($email, $full_name, $otp) {
+    $subject = "Login Verification Code - " . SITE_NAME;
+    $message = "
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 20px auto; background: white; }
+            .header { background: linear-gradient(135deg, #0d1b2a 0%, #1a2f48 100%); color: white; padding: 30px; text-align: center; }
+            .content { padding: 30px; }
+            .otp-box { background: #f8f9fa; border: 2px dashed #00c2e0; padding: 20px; text-align: center; margin: 20px 0; border-radius: 10px; }
+            .otp-code { font-size: 32px; font-weight: bold; color: #00c2e0; letter-spacing: 5px; }
+            .footer { text-align: center; padding: 20px; color: #6c757d; font-size: 12px; background: #f8f9fa; }
+        </style>
+    </head>
+    <body>
+        <div class='container'>
+            <div class='header'>
+                <h1>🔐 Login Verification</h1>
+            </div>
+            <div class='content'>
+                <h2>Hello " . htmlspecialchars($full_name) . ",</h2>
+                <p>A login attempt was detected from a new device. Use the code below to verify:</p>
+                <div class='otp-box'>
+                    <div style='font-size:14px; color:#6c757d; margin-bottom:10px;'>Verification Code</div>
+                    <div class='otp-code'>" . $otp . "</div>
+                    <div style='font-size:12px; color:#6c757d; margin-top:10px;'>Valid for 10 minutes</div>
+                </div>
+                <p><strong>Important:</strong></p>
+                <ul>
+                    <li>Do not share this code with anyone</li>
+                    <li>If you did not attempt to login, please change your password immediately</li>
+                </ul>
+                <p style='margin-top:30px;'>Best regards,<br><strong>" . SITE_NAME . " Team</strong></p>
+            </div>
+            <div class='footer'>
+                <p>&copy; " . date('Y') . " " . SITE_NAME . ". All rights reserved.</p>
+            </div>
+        </div>
+    </body>
+    </html>";
+
+    return sendEmail($email, $subject, $message);
+}
+
+function generate2FACode($user_id) {
+    global $conn;
+
+    $otp        = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+    $expires_at = date('Y-m-d H:i:s', strtotime('+10 minutes'));
+
+    // Delete old 2FA codes for this user
+    $stmt = $conn->prepare("DELETE FROM two_fa_codes WHERE user_id = ?");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+
+    // Insert new code
+    $stmt = $conn->prepare("
+        INSERT INTO two_fa_codes (user_id, otp_code, expires_at) 
+        VALUES (?, ?, ?)
+    ");
+    $stmt->bind_param("iss", $user_id, $otp, $expires_at);
+
+    if ($stmt->execute()) return $otp;
+    return false;
+}
+
+function verify2FACode($user_id, $otp) {
+    global $conn;
+
+    $stmt = $conn->prepare("
+        SELECT id, attempts FROM two_fa_codes 
+        WHERE user_id = ? AND otp_code = ? AND is_used = 0 AND expires_at > NOW()
+    ");
+    $stmt->bind_param("is", $user_id, $otp);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows === 0) {
+        // Increment attempts
+        $stmt = $conn->prepare("
+            UPDATE two_fa_codes SET attempts = attempts + 1 
+            WHERE user_id = ? AND is_used = 0 AND expires_at > NOW()
+        ");
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+
+        // Check if max attempts reached (3)
+        $stmt = $conn->prepare("
+            SELECT attempts FROM two_fa_codes 
+            WHERE user_id = ? AND is_used = 0 AND expires_at > NOW()
+        ");
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+
+        if ($row && $row['attempts'] >= 3) {
+            // Invalidate code
+            $stmt = $conn->prepare("UPDATE two_fa_codes SET is_used = 1 WHERE user_id = ?");
+            $stmt->bind_param("i", $user_id);
+            $stmt->execute();
+            // Clear 2FA session
+            unset($_SESSION['2fa_user_id'], $_SESSION['2fa_role'], $_SESSION['2fa_started_at']);
+            return ['success' => false, 'message' => 'Too many incorrect attempts. Please login again.', 'max_reached' => true];
+        }
+
+        $remaining = 3 - ($row['attempts'] ?? 1);
+        return ['success' => false, 'message' => "Invalid code. {$remaining} attempt(s) remaining."];
+    }
+
+    // Mark as used
+    $stmt = $conn->prepare("UPDATE two_fa_codes SET is_used = 1 WHERE user_id = ?");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+
+    return ['success' => true];
+}
