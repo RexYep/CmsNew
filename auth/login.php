@@ -18,6 +18,14 @@ $error   = '';
 $success = '';
 $result  = [];
 
+if (isset($_GET['error'])) {
+    if ($_GET['error'] === 'max_attempts') {
+        $error = 'Too many incorrect verification attempts. Please login again.';
+    } elseif ($_GET['error'] === 'session_expired') {
+        $error = 'Verification session expired. Please login again.';
+    }
+}
+
 if (isset($_GET['deleted']) && $_GET['deleted'] == 1) {
     $success = 'Your account has been permanently deleted. You can create a new account if you wish to return.';
 }
@@ -26,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // ========== SPAM PROTECTION START ==========
     // Validate honeypot, CSRF, and rate limiting
     $validation = validateFormProtection('login', 5, 60); // 5 attempts per 60 seconds
-    
+
     if (!$validation['valid']) {
         $error = implode('<br>', $validation['errors']);
     } else {
@@ -37,66 +45,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = $recaptcha['message'];
             }
         }
-        
+
         // If all validations passed,proceed with login
         if (empty($error)) {
             $email    = sanitizeInput($_POST['email']);
             $password = $_POST['password'];
-            
 
-        $stmt = $conn->prepare("SELECT role FROM users WHERE email = ?");
-        $stmt->bind_param("s", $email);
-        $stmt->execute();
-        $row = $stmt->get_result()->fetch_assoc();
 
-     if ($row && $row['role'] === ROLE_ADMIN) {
-    $error = 'This portal is for users only.';
-} else {
-    $result = loginUser($email, $password);
-if ($result['success']) {
-    $user_id = $_SESSION['user_id'];
+            $stmt = $conn->prepare("SELECT role FROM users WHERE email = ?");
+            $stmt->bind_param("s", $email);
+            $stmt->execute();
+            $row = $stmt->get_result()->fetch_assoc();
 
-    // Clean expired trusted devices
-    cleanExpiredDevices($user_id);
+            if ($row && $row['role'] === ROLE_ADMIN) {
+                $error = 'This portal is for users only.';
+            } else {
+                $result = loginUser($email, $password);
+                if ($result['success']) {
+                    $user_id = $_SESSION['user_id'];
 
-    // Check if trusted device
-    if (isTrustedDevice($user_id)) {
-        header("Location: ../user/index.php");
-        exit();
-    }
+                    // Clean expired trusted devices
+                    cleanExpiredDevices($user_id);
 
-    // New device — generate and send 2FA code
-    $otp = generate2FACode($user_id);
-    if ($otp) {
-        $sent = send2FAEmail($_SESSION['email'], $_SESSION['full_name'], $otp);
-        if ($sent) {
-            // Store temp session for 2FA — remove full session until verified
-            $temp = [
-                'user_id'   => $_SESSION['user_id'],
-                'full_name' => $_SESSION['full_name'],
-                'email'     => $_SESSION['email'],
-                'role'      => $_SESSION['role'],
-            ];
-            if (isset($_SESSION['admin_level'])) {
-                $temp['admin_level'] = $_SESSION['admin_level'];
+                    // Check if trusted device
+                    if (isTrustedDevice($user_id)) {
+                        header("Location: ../user/index.php");
+                        exit();
+                    }
+
+                    $rate = checkRateLimit('2fa_send_' . $user_id, 5, 300); // 5 logins per 5 min
+                    if (!$rate['allowed']) {
+                        session_unset();
+                        session_destroy();
+                        $error = 'Too many login attempts. Please wait a few minutes before trying again.';
+                    } else {
+                        // New device — generate and send 2FA code
+                        $otp = generate2FACode($user_id);
+                        if ($otp) {
+                            $sent = send2FAEmail($_SESSION['email'], $_SESSION['full_name'], $otp);
+                            if ($sent) {
+                                // Store temp session for 2FA — remove full session until verified
+                                $temp = [
+                                    'user_id'   => $_SESSION['user_id'],
+                                    'full_name' => $_SESSION['full_name'],
+                                    'email'     => $_SESSION['email'],
+                                    'role'      => $_SESSION['role'],
+                                ];
+                                if (isset($_SESSION['admin_level'])) {
+                                    $temp['admin_level'] = $_SESSION['admin_level'];
+                                }
+                                session_unset();
+                                $_SESSION['2fa_user_id']    = $temp['user_id'];
+                                $_SESSION['2fa_full_name']  = $temp['full_name'];
+                                $_SESSION['2fa_email']      = $temp['email'];
+                                $_SESSION['2fa_role']       = $temp['role'];
+                                $_SESSION['2fa_started_at'] = time();
+                                header("Location: ../auth/verify_2fa.php");
+                                exit();
+                            }
+                        }//
+                    }
+                    session_unset();
+                    session_destroy();
+                    $error = 'Unable to send verification code. Please try again later.';
+                } else {
+                    $error = $result['message'];
+                }
             }
-            session_unset();
-            $_SESSION['2fa_user_id']    = $temp['user_id'];
-            $_SESSION['2fa_full_name']  = $temp['full_name'];
-            $_SESSION['2fa_email']      = $temp['email'];
-            $_SESSION['2fa_role']       = $temp['role'];
-            $_SESSION['2fa_started_at'] = time();
-            header("Location: ../auth/verify_2fa.php");
-            exit();
-        }
-    }
-    // Fallback — if email fails, let them in (optional, pwede ding block)
-    header("Location: ../user/index.php");
-    exit();
-    } else {
-        $error = $result['message'];
-    }
-}
         }
     }
     // ========== SPAM PROTECTION END ==========
@@ -544,7 +559,9 @@ if ($result['success']) {
             <button type="submit" class="btn-submit">
                 <i class="bi bi-box-arrow-in-right"></i> Login
             </button>
-            <?php if (isRecaptchaConfigured()) echo displayRecaptchaBadge(); ?>
+            <?php if (isRecaptchaConfigured()) {
+                echo displayRecaptchaBadge();
+            } ?>
         </form>
 
         <div class="auth-divider"><span>or</span></div>

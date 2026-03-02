@@ -401,6 +401,8 @@ $resolved = $stmt->get_result()->fetch_assoc()['total'];
             </div>
             <form method="POST" action="profile.php" enctype="multipart/form-data" data-recaptcha="profile_upload">
                 <div class="modal-body">
+                     <?php formProtection(); ?>                             
+                     <input type="hidden" name="upload_picture" value="1"> 
                     <!-- Current Picture Preview -->
                     <div class="text-center mb-3">
                         <div id="imagePreview" class="mb-3">

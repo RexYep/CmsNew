@@ -353,7 +353,8 @@ include '../includes/navbar.php';
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" enctype="multipart/form-data" data-recaptcha="profile_upload">
-                <?php formProtection(); ?>
+                 <?php formProtection(); ?>                              
+                 <input type="hidden" name="upload_picture" value="1"> 
                 <div class="modal-body">
                     <div class="text-center mb-3">
                         <div id="imagePreview" class="mb-3">
