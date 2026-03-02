@@ -34,8 +34,8 @@ $categories = getAllCategories();
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-     $validation = validateFormProtection('complaint_submit', 3, 60); // 3 per minute
-    
+    $validation = validateFormProtection('complaint_submit', 3, 60); // 3 per minute
+
     if (!$validation['valid']) {
         $error = implode('<br>', $validation['errors']);
     } else {
@@ -46,153 +46,156 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = $recaptcha['message'];
             }
         }
-        
+
         // If validation passed, proceed
         if (empty($error)) {
-    
 
-   $limit_check = checkDailyComplaintLimit($user_id);
-    if (!$limit_check['can_submit']) {
-        $error = 'Daily complaint limit reached! You have submitted ' . $limit_check['count'] . ' complaint(s) today. Please try again tomorrow.';
-    } else {
 
-    $user_id = $_SESSION['user_id'];
-    $category_id = sanitizeInput($_POST['category_id']);
-    $subject = sanitizeInput($_POST['subject']);
-    $description = sanitizeInput($_POST['description']);
-    $priority = sanitizeInput($_POST['priority']);
-    
-    // Validate inputs
-    if (empty($subject) || empty($description) || empty($category_id)) {
-        $error = 'Please fill in all required fields';
-    } else if (strlen($subject) < 5) {
-        $error = 'Subject must be at least 5 characters long';
-    } else if (strlen($description) < 20) {
-        $error = 'Description must be at least 20 characters long';
-    } else {
-        // Insert complaint
-     $stmt = $conn->prepare("INSERT INTO complaints (user_id, category_id, subject, description, priority, status) VALUES (?, ?, ?, ?, ?, 'Pending')");
-        $stmt->bind_param("iisss", $user_id, $category_id, $subject, $description, $priority);
+            $limit_check = checkDailyComplaintLimit($user_id);
+            if (!$limit_check['can_submit']) {
+                $error = 'Daily complaint limit reached! You have submitted ' . $limit_check['count'] . ' complaint(s) today. Please try again tomorrow.';
+            } else {
 
-        if ($stmt->execute()) {
-            $complaint_id = $conn->insert_id;
-            
-            // Handle file uploads with CLOUDINARY
-            $upload_success = true;
-            $uploaded_files = [];
-            
-            if (!empty($_FILES['attachments']['name'][0])) {
-                $allowed_types = [
-                    'image/jpeg', 'image/png', 'image/gif', 
-                    'application/pdf', 
-                    'application/msword', 
-                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                    'video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/webm'
-                ];
-                $max_file_size = 50 * 1024 * 1024; // 50MB (for videos)
-                
-                foreach ($_FILES['attachments']['tmp_name'] as $key => $tmp_name) {
-                    if ($_FILES['attachments']['error'][$key] === 0) {
-                        $file_name = $_FILES['attachments']['name'][$key];
-                        $file_type = $_FILES['attachments']['type'][$key];
-                        $file_size = $_FILES['attachments']['size'][$key];
-                        
-                        // Validate file type
-                        if (!in_array($file_type, $allowed_types)) {
-                            $error = "File type not allowed: $file_name";
-                            $upload_success = false;
-                            break;
+                $user_id = $_SESSION['user_id'];
+                $category_id = sanitizeInput($_POST['category_id']);
+                $subject = sanitizeInput($_POST['subject']);
+                $description = sanitizeInput($_POST['description']);
+                $priority = sanitizeInput($_POST['priority']);
+
+                // Validate inputs
+                if (empty($subject) || empty($description) || empty($category_id)) {
+                    $error = 'Please fill in all required fields';
+                } elseif (strlen($subject) < 5) {
+                    $error = 'Subject must be at least 5 characters long';
+                } elseif (strlen($description) < 20) {
+                    $error = 'Description must be at least 20 characters long';
+                } else {
+                    // Insert complaint
+                    $stmt = $conn->prepare("INSERT INTO complaints (user_id, category_id, subject, description, priority, status) VALUES (?, ?, ?, ?, ?, 'Pending')");
+                    $stmt->bind_param("iisss", $user_id, $category_id, $subject, $description, $priority);
+
+                    if ($stmt->execute()) {
+                        $complaint_id = $conn->insert_id;
+
+                        // Handle file uploads with CLOUDINARY
+                        $upload_success = true;
+                        $uploaded_files = [];
+
+                        if (!empty($_FILES['attachments']['name'][0])) {
+                            $allowed_types = [
+                                'image/jpeg', 'image/png', 'image/gif',
+                                'application/pdf',
+                                'application/msword',
+                                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                                'video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/webm'
+                            ];
+                            $max_file_size = 50 * 1024 * 1024; // 50MB (for videos)
+
+                            foreach ($_FILES['attachments']['tmp_name'] as $key => $tmp_name) {
+                                if ($_FILES['attachments']['error'][$key] === 0) {
+                                    $file_name = $_FILES['attachments']['name'][$key];
+                                    $file_type = $_FILES['attachments']['type'][$key];
+                                    $file_size = $_FILES['attachments']['size'][$key];
+
+                                    // Validate file type
+                                    if (!in_array($file_type, $allowed_types)) {
+                                        $error = "File type not allowed: $file_name";
+                                        $upload_success = false;
+                                        break;
+                                    }
+
+                                    // Validate file size
+                                    if ($file_size > $max_file_size) {
+                                        $error = "File too large (max 50MB): $file_name";
+                                        $upload_success = false;
+                                        break;
+                                    }
+
+                                    // Prepare file array for Cloudinary upload
+                                    $file_array = [
+                                        'name' => $file_name,
+                                        'type' => $file_type,
+                                        'tmp_name' => $tmp_name,
+                                        'error' => $_FILES['attachments']['error'][$key],
+                                        'size' => $file_size
+                                    ];
+
+                                    // Upload to Cloudinary
+                                    $upload_result = uploadToCloudinary($file_array, 'complaints');
+
+                                    if ($upload_result['success']) {
+                                        // Save to database with Cloudinary URLs
+                                        $cloudinary_url = $upload_result['url'];
+                                        $cloudinary_public_id = $upload_result['public_id'];
+                                        $cloudinary_resource_type = $upload_result['resource_type'];
+
+                                        $stmt = $conn->prepare("INSERT INTO complaint_attachments (complaint_id, file_name, file_path, cloudinary_url, cloudinary_public_id, cloudinary_resource_type, file_type, file_size) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                                        $stmt->bind_param(
+                                            "issssssi",
+                                            $complaint_id,
+                                            $file_name,
+                                            $cloudinary_url, // Store cloudinary URL as file_path for backward compatibility
+                                            $cloudinary_url,
+                                            $cloudinary_public_id,
+                                            $cloudinary_resource_type,
+                                            $file_type,
+                                            $file_size
+                                        );
+                                        $stmt->execute();
+
+                                        $uploaded_files[] = $file_name;
+                                    } else {
+                                        $error = "Failed to upload file: $file_name - " . $upload_result['error'];
+                                        $upload_success = false;
+                                        break;
+                                    }
+                                }
+                            }
                         }
-                        
-                        // Validate file size
-                        if ($file_size > $max_file_size) {
-                            $error = "File too large (max 50MB): $file_name";
-                            $upload_success = false;
-                            break;
+
+                        // Log to history
+                        $stmt = $conn->prepare("INSERT INTO complaint_history (complaint_id, changed_by, old_status, new_status, comment) VALUES (?, ?, NULL, 'Pending', 'Complaint submitted')");
+                        $stmt->bind_param("ii", $complaint_id, $user_id);
+                        $stmt->execute();
+
+                        // Notify only super admins about new complaint (regular admins get notified when assigned)
+                        $super_admins = $conn->query("SELECT user_id FROM users WHERE role = 'admin' AND admin_level = 'super_admin' AND status = 'active'");
+                        while ($admin = $super_admins->fetch_assoc()) {
+                            $notif_title = "New Complaint Submitted";
+                            $notif_message = "Complaint #$complaint_id: " . substr($subject, 0, 50) . "... (Priority: $priority)";
+                            $notif_type = ($priority == 'High') ? 'danger' : 'info';
+                            createNotification($admin['user_id'], $notif_title, $notif_message, $notif_type, $complaint_id);
                         }
-                        
-                        // Prepare file array for Cloudinary upload
-                        $file_array = [
-                            'name' => $file_name,
-                            'type' => $file_type,
-                            'tmp_name' => $tmp_name,
-                            'error' => $_FILES['attachments']['error'][$key],
-                            'size' => $file_size
-                        ];
-                        
-                        // Upload to Cloudinary
-                        $upload_result = uploadToCloudinary($file_array, 'complaints');
-                        
-                        if ($upload_result['success']) {
-                            // Save to database with Cloudinary URLs
-                            $cloudinary_url = $upload_result['url'];
-                            $cloudinary_public_id = $upload_result['public_id'];
-                            $cloudinary_resource_type = $upload_result['resource_type'];
-                            
-                            $stmt = $conn->prepare("INSERT INTO complaint_attachments (complaint_id, file_name, file_path, cloudinary_url, cloudinary_public_id, cloudinary_resource_type, file_type, file_size) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                            $stmt->bind_param("issssssi", 
-                                $complaint_id, 
-                                $file_name, 
-                                $cloudinary_url, // Store cloudinary URL as file_path for backward compatibility
-                                $cloudinary_url,
-                                $cloudinary_public_id,
-                                $cloudinary_resource_type,
-                                $file_type, 
-                                $file_size
-                            );
-                            $stmt->execute();
-                            
-                            $uploaded_files[] = $file_name;
+
+                        if ($upload_success) {
+                            $success = 'Complaint submitted successfully! Tracking ID: #' . $complaint_id;
+                            if (!empty($uploaded_files)) {
+                                $success .= '<br>Files uploaded: ' . implode(', ', $uploaded_files);
+                            }
                         } else {
-                            $error = "Failed to upload file: $file_name - " . $upload_result['error'];
-                            $upload_success = false;
-                            break;
+                            $success = 'Complaint submitted (ID: #' . $complaint_id . '), but some files failed to upload.';
                         }
+
+                        // Clear form
+                        $subject = $description = '';
+                    } else {
+                        $error = 'Failed to submit complaint. Please try again.';
                     }
                 }
-            }
-            
-            // Log to history
-            $stmt = $conn->prepare("INSERT INTO complaint_history (complaint_id, changed_by, old_status, new_status, comment) VALUES (?, ?, NULL, 'Pending', 'Complaint submitted')");
-            $stmt->bind_param("ii", $complaint_id, $user_id);
-            $stmt->execute();
-            
-        // Notify only super admins about new complaint (regular admins get notified when assigned)
-$super_admins = $conn->query("SELECT user_id FROM users WHERE role = 'admin' AND admin_level = 'super_admin' AND status = 'active'");
-while ($admin = $super_admins->fetch_assoc()) {
-    $notif_title = "New Complaint Submitted";
-    $notif_message = "Complaint #$complaint_id: " . substr($subject, 0, 50) . "... (Priority: $priority)";
-    $notif_type = ($priority == 'High') ? 'danger' : 'info';
-    createNotification($admin['user_id'], $notif_title, $notif_message, $notif_type, $complaint_id);
-}
-            
-            if ($upload_success) {
-                $success = 'Complaint submitted successfully! Tracking ID: #' . $complaint_id;
-                if (!empty($uploaded_files)) {
-                    $success .= '<br>Files uploaded: ' . implode(', ', $uploaded_files);
-                }
-            } else {
-                $success = 'Complaint submitted (ID: #' . $complaint_id . '), but some files failed to upload.';
-            }
-            
-            // Clear form
-            $subject = $description = '';
-        } else {
-            $error = 'Failed to submit complaint. Please try again.';
-        }
-    }
-        } // Close the daily limit check
+            } // Close the daily limit check
 
-      } // End empty($error) check
+        } // End empty($error) check
     } // End validation check
-    
+
 }
 
 
 include '../includes/header.php';
 include '../includes/navbar.php';
 ?>
-<?php if (function_exists('loadRecaptchaScript')) echo loadRecaptchaScript(); ?>
+<?php if (function_exists('loadRecaptchaScript')) {
+    echo loadRecaptchaScript();
+} ?>
 
 <div class="row">
     <div class="col-lg-8 mx-auto">
@@ -230,7 +233,7 @@ include '../includes/navbar.php';
                     </div>
                 <?php endif; ?>
 
-                <form method="POST" action="" enctype="multipart/form-data" <?php echo !$can_submit ? 'style="pointer-events: none; opacity: 0.6;"' : ''; ?>>
+                <form method="POST" action="" enctype="multipart/form-data" data-recaptcha="complaint_submit" <?php echo !$can_submit ? 'style="pointer-events: none; opacity: 0.6;"' : ''; ?>>
                 <?php formProtection(); ?>    
                 <div class="mb-3">
                         <label for="category_id" class="form-label">Category <span class="text-danger">*</span></label>
@@ -308,7 +311,9 @@ include '../includes/navbar.php';
                             <i class="bi bi-arrow-left"></i> Back to Dashboard
                         </a>
                     </div>
-                    <?php if (isRecaptchaConfigured()) echo displayRecaptchaBadge(); ?>
+                    <?php if (isRecaptchaConfigured()) {
+                        echo displayRecaptchaBadge();
+                    } ?>
                 </form>
             </div>
         </div>

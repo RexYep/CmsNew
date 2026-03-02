@@ -28,11 +28,11 @@ $user = getUserById($user_id);
 
 // Handle profile picture upload with CLOUDINARY
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_picture'])) {
-    
+
     // ========== SPAM PROTECTION START ==========
     // Validate honeypot, CSRF, and rate limiting
     $validation = validateFormProtection('profile_upload', 3, 60); // 3 attempts per minute
-    
+
     if (!$validation['valid']) {
         $error = implode('<br>', $validation['errors']);
     } else {
@@ -43,52 +43,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_picture'])) {
                 $error = $recaptcha['message'];
             }
         }
-        
+
         // If validation passed, proceed with upload
         if (empty($error)) {
             // ========== SPAM PROTECTION END ==========
-            
+
             if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === 0) {
 
                 $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
                 if (!in_array($_FILES['profile_picture']['type'], $allowed_types)) {
                     $error = 'Only JPG, PNG, and GIF images are allowed';
                 } elseif ($_FILES['profile_picture']['size'] > 2 * 1024 * 1024) {
-            $error = 'Avatar size must not exceed 2MB';
-            error_log("ERROR: File too large");
-        } 
-        else {
-            error_log("Attempting  upload...");
-            $upload_result = uploadToCloudinary($_FILES['profile_picture'], 'avatars');
-            error_log("Upload result: " . print_r($upload_result, true));
-            
-            if ($upload_result['success']) {
-                $avatar_url = $upload_result['url'];
-                $avatar_public_id = $upload_result['public_id'];
-                error_log("Upload SUCCESS. URL: " . $avatar_url);
-                
-                $stmt = $conn->prepare("UPDATE users SET profile_picture = NULL, avatar_url = ?, avatar_public_id = ? WHERE user_id = ?");
-                $stmt->bind_param("ssi", $avatar_url, $avatar_public_id, $user_id);
-                
-                if ($stmt->execute()) {
-                    $success = 'Profile picture updated successfully!';
-                    error_log("DB UPDATE SUCCESS");
-                    $_SESSION['avatar_url'] = $avatar_url;
-                    $user = getUserById($user_id);
+                    $error = 'Avatar size must not exceed 2MB';
+                    error_log("ERROR: File too large");
                 } else {
-                    $error = 'Database error: ' . $stmt->error;
-                    error_log("DB ERROR: " . $stmt->error);
+                    error_log("Attempting  upload...");
+                    $upload_result = uploadToCloudinary($_FILES['profile_picture'], 'avatars');
+                    error_log("Upload result: " . print_r($upload_result, true));
+
+                    if ($upload_result['success']) {
+                        $avatar_url = $upload_result['url'];
+                        $avatar_public_id = $upload_result['public_id'];
+                        error_log("Upload SUCCESS. URL: " . $avatar_url);
+
+                        $stmt = $conn->prepare("UPDATE users SET profile_picture = NULL, avatar_url = ?, avatar_public_id = ? WHERE user_id = ?");
+                        $stmt->bind_param("ssi", $avatar_url, $avatar_public_id, $user_id);
+
+                        if ($stmt->execute()) {
+                            $success = 'Profile picture updated successfully!';
+                            error_log("DB UPDATE SUCCESS");
+                            $_SESSION['avatar_url'] = $avatar_url;
+                            $user = getUserById($user_id);
+                        } else {
+                            $error = 'Database error: ' . $stmt->error;
+                            error_log("DB ERROR: " . $stmt->error);
+                        }
+                    } else {
+                        $error = 'Upload failed: ' . $upload_result['error'];
+                        error_log("CLOUDINARY FAILED: " . $upload_result['error']);
+                    }
                 }
             } else {
-                $error = 'Upload failed: ' . $upload_result['error'];
-                error_log("CLOUDINARY FAILED: " . $upload_result['error']);
+                $error = 'Please select a file to upload';
             }
-     }
-    } else {
-        $error = 'Please select a file to upload';
+        }
     }
-        } 
-    } 
 }
 
 // Handle profile picture delete
@@ -97,11 +96,11 @@ if (isset($_GET['delete_picture'])) {
     if (!empty($user['avatar_public_id'])) {
         $delete_result = deleteFromCloudinary($user['avatar_public_id'], 'image');
     }
-    
+
     // Update database
     $stmt = $conn->prepare("UPDATE users SET profile_picture = NULL, avatar_url = NULL, avatar_public_id = NULL WHERE user_id = ?");
     $stmt->bind_param("i", $user_id);
-    
+
     if ($stmt->execute()) {
         $success = 'Profile picture deleted successfully';
         unset($_SESSION['avatar_url']);
@@ -113,13 +112,13 @@ if (isset($_GET['delete_picture'])) {
 
 // Handle profile update
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
-    
+
     $full_name = sanitizeInput($_POST['full_name']);
     $email = sanitizeInput($_POST['email']);
     $phone = sanitizeInput($_POST['phone']);
-    
+
     $result = updateUserProfile($user_id, $full_name, $email, $phone);
-    
+
     if ($result['success']) {
         $success = $result['message'];
         $user = getUserById($user_id); // Refresh user data
@@ -133,12 +132,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
     $current_password = $_POST['current_password'];
     $new_password = $_POST['new_password'];
     $confirm_password = $_POST['confirm_password'];
-    
+
     if ($new_password !== $confirm_password) {
         $error = 'New passwords do not match';
     } else {
         $result = changePassword($user_id, $current_password, $new_password);
-        
+
         if ($result['success']) {
             $success = $result['message'];
         } else {
@@ -150,7 +149,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
 include '../includes/header.php';
 include '../includes/navbar.php';
 ?>
-<?php if (function_exists('loadRecaptchaScript')) echo loadRecaptchaScript(); ?>
+<?php if (function_exists('loadRecaptchaScript')) {
+    echo loadRecaptchaScript();
+} ?>
 
 
 <div class="row">
@@ -279,7 +280,7 @@ include '../includes/navbar.php';
                 } else {
                     $has_avatar = false;
                 }
-                ?>
+?>
                 
                 <?php if ($has_avatar): ?>
                     <img src="<?php echo htmlspecialchars($avatar_display); ?>" 
@@ -336,22 +337,22 @@ include '../includes/navbar.php';
             </div>
             <div class="card-body">
                 <?php
-                // Get user's complaint statistics
-                $stmt = $conn->prepare("SELECT COUNT(*) as total FROM complaints WHERE user_id = ?");
-                $stmt->bind_param("i", $user_id);
-                $stmt->execute();
-                $total = $stmt->get_result()->fetch_assoc()['total'];
+// Get user's complaint statistics
+$stmt = $conn->prepare("SELECT COUNT(*) as total FROM complaints WHERE user_id = ?");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$total = $stmt->get_result()->fetch_assoc()['total'];
 
-                $stmt = $conn->prepare("SELECT COUNT(*) as total FROM complaints WHERE user_id = ? AND status = 'Pending'");
-                $stmt->bind_param("i", $user_id);
-                $stmt->execute();
-                $pending = $stmt->get_result()->fetch_assoc()['total'];
+$stmt = $conn->prepare("SELECT COUNT(*) as total FROM complaints WHERE user_id = ? AND status = 'Pending'");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$pending = $stmt->get_result()->fetch_assoc()['total'];
 
-                $stmt = $conn->prepare("SELECT COUNT(*) as total FROM complaints WHERE user_id = ? AND status = 'Resolved'");
-                $stmt->bind_param("i", $user_id);
-                $stmt->execute();
-                $resolved = $stmt->get_result()->fetch_assoc()['total'];
-                ?>
+$stmt = $conn->prepare("SELECT COUNT(*) as total FROM complaints WHERE user_id = ? AND status = 'Resolved'");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$resolved = $stmt->get_result()->fetch_assoc()['total'];
+?>
                 
                 <div class="d-flex justify-content-between mb-2">
                     <span>Total Complaints:</span>
@@ -398,8 +399,7 @@ include '../includes/navbar.php';
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" enctype="multipart/form-data" data-recaptcha="profile_upload">
-                <?php formProtection(); ?>
+            <form method="POST" action="profile.php" enctype="multipart/form-data" data-recaptcha="profile_upload">
                 <div class="modal-body">
                     <!-- Current Picture Preview -->
                     <div class="text-center mb-3">
@@ -452,7 +452,9 @@ include '../includes/navbar.php';
                     <button type="submit" name="upload_picture" class="btn btn-primary">
                         <i class="bi bi-upload"></i> Upload
                     </button>
-                    <?php if (isRecaptchaConfigured()) echo displayRecaptchaBadge(); ?> 
+                    <?php if (isRecaptchaConfigured()) {
+                        echo displayRecaptchaBadge();
+                    } ?> 
                 </div>
             </form>
         </div>
