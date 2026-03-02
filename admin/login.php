@@ -1,7 +1,7 @@
 <?php
 // ============================================
 // LOGIN PAGE
-// auth/login.php
+// audmin/login.php
 // ============================================
 
 require_once '../config/config.php';
@@ -10,7 +10,7 @@ require_once '../includes/security_helper.php';
 require_once '../includes/recaptcha_helper.php';
 
 if (isLoggedIn()) {
-    header("Location: ../user/index.php");
+    header("Location: index.php");
     exit();
 }
 
@@ -57,8 +57,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute();
             $row = $stmt->get_result()->fetch_assoc();
 
-            if ($row && $row['role'] === ROLE_ADMIN) {
-                $error = 'This portal is for users only.';
+            if ($row && $row['role'] !== ROLE_ADMIN) {
+                $error = 'Account not found.';
             } else {
                 $result = loginUser($email, $password);
                 if ($result['success']) {
@@ -80,7 +80,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $error = 'Too many login attempts. Please wait a few minutes before trying again.';
                     } else {
                         // New device — generate and send 2FA code
-                        recordRateLimitAttempt('2fa_send_' . $user_id);
                         $otp = generate2FACode($user_id);
                         if ($otp) {
                             $sent = send2FAEmail($_SESSION['email'], $_SESSION['full_name'], $otp);
@@ -115,6 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
+    // ========== SPAM PROTECTION END ==========
 }
 ?>
 <!DOCTYPE html>
@@ -487,7 +487,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <div class="auth-card">
         <!-- Brand -->
-        <a href="../index.php" class="auth-brand">
+        <a href="" class="auth-brand">
             <div class="brand-icon"><i class="bi bi-clipboard2-check-fill"></i></div>
             <span class="brand-text">CMS<span>.</span></span>
         </a>
@@ -561,7 +561,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } ?>
         </form>
 
-        <div class="auth-divider"><span>or</span></div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

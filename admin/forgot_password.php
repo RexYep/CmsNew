@@ -9,6 +9,7 @@ require_once '../includes/functions.php';
 require_once '../includes/security_helper.php';
 require_once '../includes/recaptcha_helper.php';
 
+
 if (isLoggedIn()) {
     header("Location: index.php");
     exit();
@@ -507,14 +508,16 @@ if (isset($_SESSION['reset_started_at']) && (time() - $_SESSION['reset_started_a
 
         <!-- STEP 1: Email -->
         <?php if ($step === 1): ?>
-         <form method="POST" data-recaptcha="forgot_password">
+        <form method="POST" data-recaptcha="forgot_password">
             <?php formProtection(); ?>
+            <?php /* FIX #1: Hidden field preserves send_otp when JS calls form.submit() */ ?>
+            <input type="hidden" name="send_otp" value="1">
             <label class="form-label">Registered Email Address</label>
             <div class="input-wrap">
                 <i class="bi bi-envelope input-icon"></i>
                 <input type="email" class="form-control" name="email" required placeholder="you@email.com">
             </div>
-            <button type="submit" name="send_otp" class="btn-submit">
+            <button type="submit" name="send_otp" value="1" class="btn-submit">
                 <i class="bi bi-send-fill"></i> Send OTP Code
             </button>
             <?php if (isRecaptchaConfigured()) {
@@ -560,7 +563,7 @@ if (isset($_SESSION['reset_started_at']) && (time() - $_SESSION['reset_started_a
             </a>
         <?php else: ?>
         <form method="POST">
-           <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">>
+            <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
             <label class="form-label">New Password</label>
             <div class="input-wrap">
                 <i class="bi bi-lock input-icon"></i>
