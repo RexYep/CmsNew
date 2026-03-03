@@ -102,22 +102,6 @@ if (isset($_GET['delete_picture'])) {
     }
 }
 
-// Handle profile update
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
-    $full_name = sanitizeInput($_POST['full_name']);
-    $email = sanitizeInput($_POST['email']);
-    $phone = sanitizeInput($_POST['phone']);
-
-    $result = updateUserProfile($user_id, $full_name, $email, $phone);
-
-    if ($result['success']) {
-        $success = $result['message'];
-        $user = getUserById($user_id);
-    } else {
-        $error = $result['message'];
-    }
-}
-
 // Handle password change
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
     $current_password = $_POST['current_password'];
@@ -184,21 +168,21 @@ include '../includes/navbar.php';
                 <form method="POST" action="">
                     <div class="row mb-3">
                         <div class="col-md-12">
-                            <label for="full_name" class="form-label">Full Name <span class="text-danger">*</span></label>
+                            <label for="full_name" class="form-label">Full Name</label>
                             <input type="text" class="form-control" id="full_name" name="full_name"
-                                   value="<?php echo htmlspecialchars($user['full_name']); ?>" required>
+                             value="<?php echo htmlspecialchars($user['full_name']); ?>" readonly>
                         </div>
                     </div>
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label for="email" class="form-label">Email Address <span class="text-danger">*</span></label>
+                            <label for="email" class="form-label">Email Address</label>
                             <input type="email" class="form-control" id="email" name="email"
-                                   value="<?php echo htmlspecialchars($user['email']); ?>" required>
+                            value="<?php echo htmlspecialchars($user['email']); ?>" readonly>
                         </div>
                         <div class="col-md-6">
                             <label for="phone" class="form-label">Phone Number</label>
                             <input type="tel" class="form-control" id="phone" name="phone"
-                                   value="<?php echo htmlspecialchars($user['phone'] ?? ''); ?>">
+                            value="<?php echo htmlspecialchars($user['phone'] ?? ''); ?>" readonly>
                         </div>
                     </div>
                     <div class="row mb-3">
@@ -219,9 +203,6 @@ include '../includes/navbar.php';
                         </div>
                     </div>
                     <div class="d-flex gap-2">
-                        <button type="submit" name="update_profile" class="btn btn-primary">
-                            <i class="bi bi-save"></i> Update Profile
-                        </button>
                         <a href="index.php" class="btn btn-outline-secondary">
                             <i class="bi bi-arrow-left"></i> Back to Dashboard
                         </a>
