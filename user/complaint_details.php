@@ -44,7 +44,7 @@ $complaint = $result->fetch_assoc();
 // Handle user confirmation for resolved complaints
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_resolved'])) {
     $confirmation_action = sanitizeInput($_POST['confirmation_action']);
-    
+
     if ($complaint['status'] !== 'Resolved') {
         $error = 'This complaint is not in Resolved status.';
     } else {
@@ -58,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_resolved'])) 
                 WHERE complaint_id = ?
             ");
             $stmt->bind_param("i", $complaint_id);
-            
+
             if ($stmt->execute()) {
                 // Log to history
                 $stmt = $conn->prepare("
@@ -68,32 +68,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_resolved'])) 
                 ");
                 $stmt->bind_param("ii", $complaint_id, $user_id);
                 $stmt->execute();
-                
-            // Notify assigned admin first (with rating if exists)
-if (!empty($complaint['assigned_to'])) {
-    notifyResolutionConfirmed(
-        $complaint['assigned_to'],
-        $complaint_id,
-        $_SESSION['full_name'],
-        $complaint['user_rating'] ?? null
-    );
-}
 
-// Notify super admins
-$super_admins = $conn->query("SELECT user_id FROM users WHERE role = 'admin' AND admin_level = 'super_admin' AND status = 'active'");
-while ($admin = $super_admins->fetch_assoc()) {
-    if ($admin['user_id'] != $complaint['assigned_to']) {
-        notifyResolutionConfirmed(
-            $admin['user_id'],
-            $complaint_id,
-            $_SESSION['full_name'],
-            $complaint['user_rating'] ?? null
-        );
-    }
-}
-                
+                // Notify assigned admin first (with rating if exists)
+                if (!empty($complaint['assigned_to'])) {
+                    notifyResolutionConfirmed(
+                        $complaint['assigned_to'],
+                        $complaint_id,
+                        $_SESSION['full_name'],
+                        $complaint['user_rating'] ?? null
+                    );
+                }
+
+                // Notify super admins
+                $super_admins = $conn->query("SELECT user_id FROM users WHERE role = 'admin' AND admin_level = 'super_admin' AND status = 'active'");
+                while ($admin = $super_admins->fetch_assoc()) {
+                    if ($admin['user_id'] != $complaint['assigned_to']) {
+                        notifyResolutionConfirmed(
+                            $admin['user_id'],
+                            $complaint_id,
+                            $_SESSION['full_name'],
+                            $complaint['user_rating'] ?? null
+                        );
+                    }
+                }
+
                 $success = 'Thank you! Your complaint has been marked as closed.';
-                
+
                 // Refresh complaint data
                 $stmt = $conn->prepare("
                     SELECT c.*, cat.category_name, u.full_name as admin_name, u.email as admin_email
@@ -108,51 +108,51 @@ while ($admin = $super_admins->fetch_assoc()) {
             } else {
                 $error = 'Failed to update complaint status.';
             }
-            
-       } else if ($confirmation_action === 'reopen') {
-    // User wants to reopen
-    $reopen_reason = sanitizeInput($_POST['reopen_reason']);
-    
-    if (empty($reopen_reason)) {
-        $error = 'Please provide a reason for reopening.';
-    } else {
-        // Create reopen request instead of directly reopening
-        $result = createReopenRequest($complaint_id, $user_id, $reopen_reason);
-        
-        if ($result['success']) {
-          // Notify assigned admin with enhanced notification
-if (!empty($complaint['assigned_to'])) {
-    notifyReopenRequest(
-        $complaint['assigned_to'],
-        $complaint_id,
-        $_SESSION['full_name'],
-        $reopen_reason
-    );
-}
 
-// Notify super admins
-$super_admins = $conn->query("SELECT user_id FROM users WHERE role = 'admin' AND admin_level = 'super_admin' AND status = 'active'");
-while ($admin = $super_admins->fetch_assoc()) {
-    if ($admin['user_id'] != $complaint['assigned_to']) {
-        notifyReopenRequest(
-            $admin['user_id'],
-            $complaint_id,
-            $_SESSION['full_name'],
-            $reopen_reason
-        );
-    }
-}
-            
-            $success = 'Your reopen request has been submitted. An admin will review it shortly.';
-            
-            // Refresh page
-            header("Location: complaint_details.php?id=$complaint_id");
-            exit();
-        } else {
-            $error = $result['message'];
+        } elseif ($confirmation_action === 'reopen') {
+            // User wants to reopen
+            $reopen_reason = sanitizeInput($_POST['reopen_reason']);
+
+            if (empty($reopen_reason)) {
+                $error = 'Please provide a reason for reopening.';
+            } else {
+                // Create reopen request instead of directly reopening
+                $result = createReopenRequest($complaint_id, $user_id, $reopen_reason);
+
+                if ($result['success']) {
+                    // Notify assigned admin with enhanced notification
+                    if (!empty($complaint['assigned_to'])) {
+                        notifyReopenRequest(
+                            $complaint['assigned_to'],
+                            $complaint_id,
+                            $_SESSION['full_name'],
+                            $reopen_reason
+                        );
+                    }
+
+                    // Notify super admins
+                    $super_admins = $conn->query("SELECT user_id FROM users WHERE role = 'admin' AND admin_level = 'super_admin' AND status = 'active'");
+                    while ($admin = $super_admins->fetch_assoc()) {
+                        if ($admin['user_id'] != $complaint['assigned_to']) {
+                            notifyReopenRequest(
+                                $admin['user_id'],
+                                $complaint_id,
+                                $_SESSION['full_name'],
+                                $reopen_reason
+                            );
+                        }
+                    }
+
+                    $success = 'Your reopen request has been submitted. An admin will review it shortly.';
+
+                    // Refresh page
+                    header("Location: complaint_details.php?id=$complaint_id");
+                    exit();
+                } else {
+                    $error = $result['message'];
+                }
+            }
         }
-    }
-}
     }
 }
 
@@ -161,7 +161,7 @@ while ($admin = $super_admins->fetch_assoc()) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_rating'])) {
     $rating = (int)$_POST['rating'];
     $feedback = sanitizeInput($_POST['feedback'] ?? '');
-    
+
     if ($complaint['status'] !== 'Closed') {
         $error = 'You can only rate closed complaints.';
     } elseif ($complaint['approval_status'] !== 'approved') {
@@ -170,10 +170,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_rating'])) {
         $error = 'Please select a valid rating (1-5 stars).';
     } else {
         $result = saveUserRating($complaint_id, $user_id, $rating, $feedback);
-        
+
         if ($result['success']) {
             $success = $result['message'];
-            
+
             // Refresh complaint data to show rating
             $stmt = $conn->prepare("
                 SELECT c.*, cat.category_name, u.full_name as admin_name, u.email as admin_email
@@ -195,35 +195,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_rating'])) {
 // Handle comment submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_comment'])) {
     $comment_text = sanitizeInput($_POST['comment']);
-    
+
     $result = addComment($complaint_id, $user_id, $comment_text);
-    
-  if ($result['success']) {
-    // Notify assigned admin with enhanced notification
-    if (!empty($complaint['assigned_to'])) {
-        notifyComment(
-            $complaint['assigned_to'],
-            $complaint_id,
-            $_SESSION['full_name'],
-            $comment_text,
-            false // is_admin_comment = false (user commenting)
-        );
-    }
-    
-    // Also notify super admins
-    $super_admins = $conn->query("SELECT user_id FROM users WHERE role = 'admin' AND admin_level = 'super_admin' AND status = 'active'");
-    while ($admin = $super_admins->fetch_assoc()) {
-        if ($admin['user_id'] != $complaint['assigned_to']) {
+
+    if ($result['success']) {
+        // Notify assigned admin with enhanced notification
+        if (!empty($complaint['assigned_to'])) {
             notifyComment(
-                $admin['user_id'],
+                $complaint['assigned_to'],
                 $complaint_id,
                 $_SESSION['full_name'],
                 $comment_text,
-                false // is_admin_comment
+                false // is_admin_comment = false (user commenting)
             );
         }
-    }
-        
+
+        // Also notify super admins
+        $super_admins = $conn->query("SELECT user_id FROM users WHERE role = 'admin' AND admin_level = 'super_admin' AND status = 'active'");
+        while ($admin = $super_admins->fetch_assoc()) {
+            if ($admin['user_id'] != $complaint['assigned_to']) {
+                notifyComment(
+                    $admin['user_id'],
+                    $complaint_id,
+                    $_SESSION['full_name'],
+                    $comment_text,
+                    false // is_admin_comment
+                );
+            }
+        }
+
         $success = $result['message'];
         header("Location: complaint_details.php?id=$complaint_id#comments");
         exit();
@@ -296,8 +296,8 @@ include '../includes/navbar.php';
                 'rejected' => '<span class="badge bg-danger"><i class="bi bi-x-circle-fill"></i> Rejected</span>',
                 'changes_requested' => '<span class="badge bg-info"><i class="bi bi-pencil-square"></i> Changes Needed</span>'
             ];
-            echo $approval_badges[$complaint['approval_status']] ?? '';
-            ?>
+echo $approval_badges[$complaint['approval_status']] ?? '';
+?>
             
             <!-- Status Badge -->
             <span class="<?php echo getStatusBadge($complaint['status']); ?>">
@@ -348,13 +348,8 @@ include '../includes/navbar.php';
             <?php echo nl2br(htmlspecialchars($complaint['rejection_reason'])); ?>
         </div>
         <p class="mb-0">
-            <small class="text-muted">
-                <i class="bi bi-info-circle"></i> You can edit and resubmit if you address the concerns above.
-            </small>
         </p>
-        <a href="edit_complaint.php?id=<?php echo $complaint_id; ?>" class="btn btn-danger">
-            <i class="bi bi-pencil"></i> Edit & Resubmit
-        </a>
+       <p class="mb-0"><small><i class="bi bi-x-circle"></i> This complaint has been permanently rejected.</small></p>
     </div>
 <?php endif; ?>
 
@@ -366,9 +361,6 @@ include '../includes/navbar.php';
                 </div>
 
                  <?php
-/**
- * ATTACHMENT DISPLAY SNIPPET
- */
 
 // Fetch attachments
 $stmt_attachments = $conn->prepare("SELECT * FROM complaint_attachments WHERE complaint_id = ? ORDER BY uploaded_date ASC");
@@ -377,7 +369,7 @@ $stmt_attachments->execute();
 $attachments = $stmt_attachments->get_result();
 
 if ($attachments->num_rows > 0):
-?>
+    ?>
 <div class="card mt-3">
     <div class="card-header">
         <i class="bi bi-paperclip"></i> Attachments (<?php echo $attachments->num_rows; ?>)
@@ -403,7 +395,7 @@ if ($attachments->num_rows > 0):
                 $is_image = strpos($file_type, 'image/') === 0;
                 $is_video = strpos($file_type, 'video/') === 0;
                 $is_pdf   = strpos($file_type, 'pdf') !== false;
-            ?>
+                ?>
             <div class="col-md-6 col-lg-4">
                 <div class="card h-100">
                     <div class="card-body p-2">
@@ -416,10 +408,10 @@ if ($attachments->num_rows > 0):
 
                             <?php if ($is_image): ?>
                                 <?php
-                                // Optimize if Cloudinary, use as-is if local
-                                $thumb_url = $is_cloudinary
-                                    ? getOptimizedImageUrl($stored_url, 400)
-                                    : $display_url;
+                                    // Optimize if Cloudinary, use as-is if local
+                                    $thumb_url = $is_cloudinary
+                                        ? getOptimizedImageUrl($stored_url, 400)
+                                        : $display_url;
                                 ?>
                                 <a href="<?php echo htmlspecialchars($display_url); ?>" target="_blank">
                                     <img src="<?php echo htmlspecialchars($thumb_url); ?>"
@@ -590,14 +582,8 @@ if ($attachments->num_rows > 0):
                     <p class="mb-0 mt-2"><?php echo nl2br(htmlspecialchars($complaint['rejection_reason'])); ?></p>
                 </div>
                 <p class="mb-0">
-                    <i class="bi bi-info-circle"></i> This complaint was rejected and cannot be rated. 
-                    You can edit and resubmit if you address the concerns above.
+                <i class="bi bi-info-circle"></i> This complaint was rejected and cannot be edited or rated.
                 </p>
-                <div class="mt-3">
-                    <a href="edit_complaint.php?id=<?php echo $complaint_id; ?>" class="btn btn-danger">
-                        <i class="bi bi-pencil"></i> Edit & Resubmit
-                    </a>
-                </div>
             </div>
         </div>
     
@@ -714,26 +700,26 @@ if ($attachments->num_rows > 0):
             <div class="card-body">
                 <div class="text-center mb-3">
                     <div style="font-size: 2rem; color: #ffc107;">
-                        <?php 
+                        <?php
                         for ($i = 1; $i <= 5; $i++) {
-                            echo $i <= $complaint['user_rating'] 
-                                ? '<i class="bi bi-star-fill"></i>' 
+                            echo $i <= $complaint['user_rating']
+                                ? '<i class="bi bi-star-fill"></i>'
                                 : '<i class="bi bi-star"></i>';
                         }
-                        ?>
+        ?>
                     </div>
                     <p class="mb-1">
                         <strong>
-                            <?php 
-                            $rating_text = [
-                                1 => 'Poor',
-                                2 => 'Fair', 
-                                3 => 'Good',
-                                4 => 'Very Good',
-                                5 => 'Excellent'
-                            ];
-                            echo $rating_text[$complaint['user_rating']] ?? 'Unknown';
-                            ?> (<?php echo $complaint['user_rating']; ?>/5)
+                            <?php
+            $rating_text = [
+                1 => 'Poor',
+                2 => 'Fair',
+                3 => 'Good',
+                4 => 'Very Good',
+                5 => 'Excellent'
+            ];
+        echo $rating_text[$complaint['user_rating']] ?? 'Unknown';
+        ?> (<?php echo $complaint['user_rating']; ?>/5)
                         </strong>
                     </p>
                     <small class="text-muted">
@@ -788,10 +774,10 @@ if ($attachments->num_rows > 0):
         </div>
 
         <!-- Reopen Requests Section (if any exist) -->
-<?php 
+<?php
 $reopen_requests = getAllReopenRequests($complaint_id);
-if ($reopen_requests->num_rows > 0): 
-?>
+if ($reopen_requests->num_rows > 0):
+    ?>
 <div class="card mt-3">
     <div class="card-header bg-warning text-dark">
         <i class="bi bi-arrow-counterclockwise"></i> Reopen Requests
@@ -977,10 +963,10 @@ if ($reopen_requests->num_rows > 0):
                 <div class="mb-3">
                     <strong>Days Pending:</strong>
                     <div class="text-muted">
-                        <?php 
-                        $days = daysElapsed($complaint['submitted_date']);
-                        echo $days . ' day' . ($days != 1 ? 's' : '');
-                        ?>
+                        <?php
+                            $days = daysElapsed($complaint['submitted_date']);
+echo $days . ' day' . ($days != 1 ? 's' : '');
+?>
                     </div>
                 </div>
 
@@ -1000,14 +986,14 @@ if ($reopen_requests->num_rows > 0):
                 <div class="mb-3">
                     <strong>Resolution Time:</strong>
                     <div class="text-muted">
-                        <?php 
-                        if (!empty($complaint['resolved_date'])) {
-                            $resolution_days = floor((strtotime($complaint['resolved_date']) - strtotime($complaint['submitted_date'])) / 86400);
-                            echo $resolution_days . ' day' . ($resolution_days != 1 ? 's' : '');
-                        } else {
-                            echo 'N/A';
-                        }
-                        ?>
+                        <?php
+if (!empty($complaint['resolved_date'])) {
+    $resolution_days = floor((strtotime($complaint['resolved_date']) - strtotime($complaint['submitted_date'])) / 86400);
+    echo $resolution_days . ' day' . ($resolution_days != 1 ? 's' : '');
+} else {
+    echo 'N/A';
+}
+?>
                     </div>
                 </div>
                 <?php endif; ?>

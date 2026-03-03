@@ -34,9 +34,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['restore_complaint']))
 }
 
 // Filter parameters
-$status_filter   = isset($_GET['status'])   ? sanitizeInput($_GET['status'])   : '';
+$status_filter   = isset($_GET['status']) ? sanitizeInput($_GET['status']) : '';
 $category_filter = isset($_GET['category']) ? sanitizeInput($_GET['category']) : '';
-$search_query    = isset($_GET['search'])   ? sanitizeInput($_GET['search'])   : '';
+$search_query    = isset($_GET['search']) ? sanitizeInput($_GET['search']) : '';
 
 // Pagination
 $page             = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -78,7 +78,7 @@ if (!empty($search_query)) {
 
 $where_clause = "WHERE " . implode(" AND ", $where_conditions);
 
-// Count total
+
 $count_query = "SELECT COUNT(*) as total FROM complaints c
                 LEFT JOIN users u ON c.user_id = u.user_id
                 $where_clause";
@@ -150,7 +150,7 @@ include '../includes/navbar.php';
                         <select class="form-select" id="status" name="status">
                             <option value="">All Status</option>
                             <option value="Resolved" <?php echo $status_filter == 'Resolved' ? 'selected' : ''; ?>>Resolved</option>
-                            <option value="Closed"   <?php echo $status_filter == 'Closed'   ? 'selected' : ''; ?>>Closed</option>
+                            <option value="Closed"   <?php echo $status_filter == 'Closed' ? 'selected' : ''; ?>>Closed</option>
                         </select>
                     </div>
                     <div class="col-md-3">
@@ -223,7 +223,7 @@ include '../includes/navbar.php';
                             </thead>
                             <tbody>
                                 <?php while ($complaint = $complaints->fetch_assoc()): ?>
-                                <tr class="table-secondary">
+                               <tr class="archived-row">
                                     <td><strong>#<?php echo $complaint['complaint_id']; ?></strong></td>
                                     <td>
                                         <strong><?php echo htmlspecialchars($complaint['user_name']); ?></strong><br>
@@ -300,21 +300,21 @@ include '../includes/navbar.php';
                     <nav aria-label="Page navigation" class="mt-3">
                         <ul class="pagination justify-content-center">
                             <li class="page-item <?php echo $page <= 1 ? 'disabled' : ''; ?>">
-                                <a class="page-link" href="?page=<?php echo $page-1; ?>&status=<?php echo $status_filter; ?>&category=<?php echo $category_filter; ?>&search=<?php echo urlencode($search_query); ?>">
+                                <a class="page-link" href="?page=<?php echo $page - 1; ?>&status=<?php echo $status_filter; ?>&category=<?php echo $category_filter; ?>&search=<?php echo urlencode($search_query); ?>">
                                     <i class="bi bi-chevron-left"></i> Previous
                                 </a>
                             </li>
                             <?php
                             $start_page = max(1, $page - 2);
-                            $end_page   = min($total_pages, $page + 2);
-                            for ($i = $start_page; $i <= $end_page; $i++):
+                        $end_page   = min($total_pages, $page + 2);
+                        for ($i = $start_page; $i <= $end_page; $i++):
                             ?>
                             <li class="page-item <?php echo $page == $i ? 'active' : ''; ?>">
                                 <a class="page-link" href="?page=<?php echo $i; ?>&status=<?php echo $status_filter; ?>&category=<?php echo $category_filter; ?>&search=<?php echo urlencode($search_query); ?>"><?php echo $i; ?></a>
                             </li>
                             <?php endfor; ?>
                             <li class="page-item <?php echo $page >= $total_pages ? 'disabled' : ''; ?>">
-                                <a class="page-link" href="?page=<?php echo $page+1; ?>&status=<?php echo $status_filter; ?>&category=<?php echo $category_filter; ?>&search=<?php echo urlencode($search_query); ?>">
+                                <a class="page-link" href="?page=<?php echo $page + 1; ?>&status=<?php echo $status_filter; ?>&category=<?php echo $category_filter; ?>&search=<?php echo urlencode($search_query); ?>">
                                     Next <i class="bi bi-chevron-right"></i>
                                 </a>
                             </li>

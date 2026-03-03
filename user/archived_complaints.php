@@ -124,8 +124,8 @@ include '../includes/navbar.php';
                         <label for="status" class="form-label">Filter by Status</label>
                         <select class="form-select" id="status" name="status">
                             <option value="">All Status</option>
-                            <option value="Resolved"     <?php echo $status_filter == 'Resolved'    ? 'selected' : ''; ?>>Resolved</option>
-                            <option value="Closed"       <?php echo $status_filter == 'Closed'      ? 'selected' : ''; ?>>Closed</option>
+                            <option value="Resolved"     <?php echo $status_filter == 'Resolved' ? 'selected' : ''; ?>>Resolved</option>
+                            <option value="Closed"       <?php echo $status_filter == 'Closed' ? 'selected' : ''; ?>>Closed</option>
                         </select>
                     </div>
                     <div class="col-md-5">
@@ -182,7 +182,7 @@ include '../includes/navbar.php';
                             </thead>
                             <tbody>
                                 <?php while ($complaint = $complaints->fetch_assoc()): ?>
-                                <tr class="table-secondary">
+                             <tr class="archived-row">
                                     <td><strong>#<?php echo $complaint['complaint_id']; ?></strong></td>
                                     <td>
                                         <div style="max-width: 280px;">
