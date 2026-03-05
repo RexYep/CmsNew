@@ -495,7 +495,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <!-- Header -->
         <div class="auth-header">
             <h1>Welcome Back</h1>
-            <p>Login to <?php echo SITE_NAME; ?></p>
+            <p>Admin Portal Login</p>
         </div>
 
         <!-- Alerts -->
