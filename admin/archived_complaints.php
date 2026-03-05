@@ -79,13 +79,12 @@ if (!empty($search_query)) {
 }
 
 if (!empty($month_filter)) {
-    $where_conditions[] = "MONTH(c.archived_at) = ?";
-    $params[] = $month_filter;
+    $where_conditions[] = "MONTH(c.submitted_date) = ?";
     $types .= "i";
 }
 
 if (!empty($year_filter)) {
-    $where_conditions[] = "YEAR(c.archived_at) = ?";
+    $where_conditions[] = "YEAR(c.submitted_date) = ?";
     $params[] = $year_filter;
     $types .= "i";
 }
