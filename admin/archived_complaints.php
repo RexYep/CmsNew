@@ -37,15 +37,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['restore_complaint']))
 $status_filter   = isset($_GET['status']) ? sanitizeInput($_GET['status']) : '';
 $category_filter = isset($_GET['category']) ? sanitizeInput($_GET['category']) : '';
 $search_query    = isset($_GET['search']) ? sanitizeInput($_GET['search']) : '';
-$month_filter    = isset($_GET['month']) ? (int)$_GET['month'] : '';
-$year_filter     = isset($_GET['year']) ? (int)$_GET['year'] : '';
+$month_filter    = isset($_GET['month']) ? (int)$_GET['month'] : 0;
+$year_filter     = isset($_GET['year']) ? (int)$_GET['year'] : 0;
 
 // Pagination
 $page             = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $records_per_page = RECORDS_PER_PAGE;
 $offset           = ($page - 1) * $records_per_page;
 
-// Build query
+// Build WHERE conditions
 $where_conditions = ["c.is_archived = 1"];
 $params = [];
 $types  = "";
@@ -65,7 +65,7 @@ if (!empty($status_filter)) {
 
 if (!empty($category_filter)) {
     $where_conditions[] = "c.category_id = ?";
-    $params[] = $category_filter;
+    $params[] = (int)$category_filter;
     $types .= "i";
 }
 
@@ -80,6 +80,7 @@ if (!empty($search_query)) {
 
 if (!empty($month_filter)) {
     $where_conditions[] = "MONTH(c.submitted_date) = ?";
+    $params[] = $month_filter;
     $types .= "i";
 }
 
@@ -92,16 +93,19 @@ if (!empty($year_filter)) {
 $where_clause = "WHERE " . implode(" AND ", $where_conditions);
 
 // Count total
-$stmt = $conn->prepare($count_query);
-if (!empty($params) && !empty($types)) {
-    $stmt->bind_param($types, ...$params);
-    $stmt->execute();
-} else {
-    $stmt->execute();
+$count_query = "
+    SELECT COUNT(*) as total
+    FROM complaints c
+    LEFT JOIN users u ON c.user_id = u.user_id
+    $where_clause
+";
+$count_stmt = $conn->prepare($count_query);
+if (!empty($params)) {
+    $count_stmt->bind_param($types, ...$params);
 }
-$total_records = $stmt->get_result()->fetch_assoc()['total'];
-
-$total_pages = ceil($total_records / $records_per_page);
+$count_stmt->execute();
+$total_records = $count_stmt->get_result()->fetch_assoc()['total'];
+$total_pages   = ceil($total_records / $records_per_page);
 
 // Fetch archived complaints
 $query = "
@@ -117,17 +121,12 @@ $query = "
     LIMIT ? OFFSET ?
 ";
 
-$params[] = $records_per_page;
-$params[] = $offset;
-$types .= "ii";
+$main_params = array_merge($params, [$records_per_page, $offset]);
+$main_types  = $types . "ii";
 
 $stmt = $conn->prepare($query);
-if (!empty($params) && !empty($types)) {
-    $stmt->bind_param($types, ...$params);
-    $stmt->execute();
-} else {
-    $stmt->execute();
-}
+$stmt->bind_param($main_types, ...$main_params);
+$stmt->execute();
 $complaints = $stmt->get_result();
 
 // Get categories for filter
