@@ -15,40 +15,20 @@ if (isAdmin()) {
 }
 
 $page_title = "Archived Complaints";
-$user_id = $_SESSION['user_id'];
-
-// Handle restore action
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['restore_complaint'])) {
-    $complaint_id = (int)$_POST['complaint_id'];
-
-    // Verify ownership
-    $stmt = $conn->prepare("SELECT complaint_id FROM complaints WHERE complaint_id = ? AND user_id = ? AND is_archived = 1");
-    $stmt->bind_param("ii", $complaint_id, $user_id);
-    $stmt->execute();
-
-    if ($stmt->get_result()->num_rows > 0) {
-        $stmt = $conn->prepare("UPDATE complaints SET is_archived = 0, archived_by = NULL, archived_at = NULL, archive_reason = NULL WHERE complaint_id = ?");
-        $stmt->bind_param("i", $complaint_id);
-        if ($stmt->execute()) {
-            $success = "Complaint #$complaint_id has been restored successfully.";
-        } else {
-            $error = "Failed to restore complaint. Please try again.";
-        }
-    } else {
-        $error = "Complaint not found or you don't have permission.";
-    }
-}
+$user_id    = $_SESSION['user_id'];
 
 // Filter parameters
-$status_filter  = isset($_GET['status']) ? sanitizeInput($_GET['status']) : '';
-$search_query   = isset($_GET['search']) ? sanitizeInput($_GET['search']) : '';
+$status_filter = isset($_GET['status']) ? sanitizeInput($_GET['status']) : '';
+$search_query  = isset($_GET['search']) ? sanitizeInput($_GET['search']) : '';
+$month_filter  = isset($_GET['month']) ? (int)$_GET['month'] : '';
+$year_filter   = isset($_GET['year']) ? (int)$_GET['year'] : '';
 
 // Pagination
 $page             = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $records_per_page = RECORDS_PER_PAGE;
 $offset           = ($page - 1) * $records_per_page;
 
-// Build query — only archived complaints for this user
+// Build query
 $where_conditions = ["c.user_id = ?", "c.is_archived = 1"];
 $params = [$user_id];
 $types  = "i";
@@ -65,6 +45,18 @@ if (!empty($search_query)) {
     $params[] = $search_param;
     $params[] = $search_param;
     $types .= "ss";
+}
+
+if (!empty($month_filter)) {
+    $where_conditions[] = "MONTH(c.archived_at) = ?";
+    $params[] = $month_filter;
+    $types .= "i";
+}
+
+if (!empty($year_filter)) {
+    $where_conditions[] = "YEAR(c.archived_at) = ?";
+    $params[] = $year_filter;
+    $types .= "i";
 }
 
 $where_clause = implode(" AND ", $where_conditions);
@@ -96,55 +88,92 @@ $stmt->bind_param($types, ...$params);
 $stmt->execute();
 $complaints = $stmt->get_result();
 
+// Pagination URL helper
+$pagination_params = http_build_query([
+    'status' => $status_filter,
+    'month'  => $month_filter,
+    'year'   => $year_filter,
+    'search' => $search_query,
+]);
+
 include '../includes/header.php';
 include '../includes/navbar.php';
 ?>
-
-<?php if (!empty($error)): ?>
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <i class="bi bi-exclamation-triangle me-2"></i><?php echo htmlspecialchars($error); ?>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-<?php endif; ?>
-
-<?php if (!empty($success)): ?>
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="bi bi-check-circle me-2"></i><?php echo htmlspecialchars($success); ?>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-<?php endif; ?>
 
 <!-- Filter Section -->
 <div class="row mb-3">
     <div class="col-12">
         <div class="card">
             <div class="card-body">
-                <form method="GET" action="" class="row g-3">
-                    <div class="col-md-3">
-                        <label for="status" class="form-label">Filter by Status</label>
-                        <select class="form-select" id="status" name="status">
+                <form method="GET" action="" class="row g-2 align-items-end">
+
+                    <div class="col-md-2">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" name="status">
                             <option value="">All Status</option>
-                            <option value="Resolved"     <?php echo $status_filter == 'Resolved' ? 'selected' : ''; ?>>Resolved</option>
-                            <option value="Closed"       <?php echo $status_filter == 'Closed' ? 'selected' : ''; ?>>Closed</option>
+                            <option value="Resolved" <?php echo $status_filter == 'Resolved' ? 'selected' : ''; ?>>Resolved</option>
+                            <option value="Closed"   <?php echo $status_filter == 'Closed' ? 'selected' : ''; ?>>Closed</option>
                         </select>
                     </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">Month</label>
+                        <select class="form-select" name="month">
+                            <option value="">All Months</option>
+                            <?php
+                            $months = ['January','February','March','April','May','June',
+                                       'July','August','September','October','November','December'];
+foreach ($months as $i => $m):
+    ?>
+                            <option value="<?php echo $i + 1; ?>" <?php echo $month_filter == $i + 1 ? 'selected' : ''; ?>>
+                                <?php echo $m; ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="col-md-1">
+                        <label class="form-label">Year</label>
+                        <select class="form-select" name="year">
+                            <option value="">All</option>
+                            <?php for ($y = (int)date('Y'); $y >= (int)date('Y') - 3; $y--): ?>
+                            <option value="<?php echo $y; ?>" <?php echo $year_filter == $y ? 'selected' : ''; ?>>
+                                <?php echo $y; ?>
+                            </option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
+
                     <div class="col-md-5">
-                        <label for="search" class="form-label">Search</label>
-                        <input type="text" class="form-control" id="search" name="search"
+                        <label class="form-label">Search</label>
+                        <input type="text" class="form-control" name="search"
                                placeholder="Search by subject or description..."
                                value="<?php echo htmlspecialchars($search_query); ?>">
                     </div>
-                    <div class="col-md-2 d-flex align-items-end">
+
+                    <div class="col-md-1">
                         <button type="submit" class="btn btn-primary w-100">
-                            <i class="bi bi-search"></i> Filter
+                            <i class="bi bi-search"></i>
                         </button>
                     </div>
-                    <div class="col-md-2 d-flex align-items-end">
+
+                    <div class="col-md-1">
                         <a href="archived_complaints.php" class="btn btn-outline-secondary w-100">
-                            <i class="bi bi-x-circle"></i> Clear
+                            <i class="bi bi-x-circle"></i>
                         </a>
                     </div>
+
                 </form>
+
+                <?php if (!empty($status_filter) || !empty($search_query) || !empty($month_filter) || !empty($year_filter)): ?>
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <i class="bi bi-funnel"></i> Filters active —
+                        <a href="archived_complaints.php" class="text-decoration-none">Clear all</a>
+                    </small>
+                </div>
+                <?php endif; ?>
+
             </div>
         </div>
     </div>
@@ -182,7 +211,7 @@ include '../includes/navbar.php';
                             </thead>
                             <tbody>
                                 <?php while ($complaint = $complaints->fetch_assoc()): ?>
-                             <tr class="archived-row">
+                                <tr class="archived-row">
                                     <td><strong>#<?php echo $complaint['complaint_id']; ?></strong></td>
                                     <td>
                                         <div style="max-width: 280px;">
@@ -224,13 +253,10 @@ include '../includes/navbar.php';
                                         </small>
                                     </td>
                                     <td>
-                                        <div class="d-flex gap-2">
-                                            <a href="complaint_details.php?id=<?php echo $complaint['complaint_id']; ?>"
-                                               class="btn btn-sm btn-outline-primary" title="View Details">
-                                                <i class="bi bi-eye"></i>
-                                            </a>
-                                        
-                                        </div>
+                                        <a href="complaint_details.php?id=<?php echo $complaint['complaint_id']; ?>"
+                                           class="btn btn-sm btn-outline-primary" title="View Details">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
                                     </td>
                                 </tr>
                                 <?php endwhile; ?>
@@ -243,15 +269,15 @@ include '../includes/navbar.php';
                     <nav aria-label="Page navigation" class="mt-3">
                         <ul class="pagination justify-content-center">
                             <li class="page-item <?php echo $page <= 1 ? 'disabled' : ''; ?>">
-                                <a class="page-link" href="?page=<?php echo $page - 1; ?>&status=<?php echo $status_filter; ?>&search=<?php echo urlencode($search_query); ?>">Previous</a>
+                                <a class="page-link" href="?page=<?php echo $page - 1; ?>&<?php echo $pagination_params; ?>">Previous</a>
                             </li>
                             <?php for ($i = 1; $i <= $total_pages; $i++): ?>
                             <li class="page-item <?php echo $page == $i ? 'active' : ''; ?>">
-                                <a class="page-link" href="?page=<?php echo $i; ?>&status=<?php echo $status_filter; ?>&search=<?php echo urlencode($search_query); ?>"><?php echo $i; ?></a>
+                                <a class="page-link" href="?page=<?php echo $i; ?>&<?php echo $pagination_params; ?>"><?php echo $i; ?></a>
                             </li>
                             <?php endfor; ?>
                             <li class="page-item <?php echo $page >= $total_pages ? 'disabled' : ''; ?>">
-                                <a class="page-link" href="?page=<?php echo $page + 1; ?>&status=<?php echo $status_filter; ?>&search=<?php echo urlencode($search_query); ?>">Next</a>
+                                <a class="page-link" href="?page=<?php echo $page + 1; ?>&<?php echo $pagination_params; ?>">Next</a>
                             </li>
                         </ul>
                     </nav>
@@ -261,7 +287,7 @@ include '../includes/navbar.php';
                     <div class="text-center py-5">
                         <i class="bi bi-archive" style="font-size: 4rem; color: #ddd;"></i>
                         <h5 class="mt-3 text-muted">No archived complaints</h5>
-                        <?php if (!empty($status_filter) || !empty($search_query)): ?>
+                        <?php if (!empty($status_filter) || !empty($search_query) || !empty($month_filter) || !empty($year_filter)): ?>
                             <p class="text-muted">Try adjusting your filters</p>
                             <a href="archived_complaints.php" class="btn btn-outline-secondary">Clear Filters</a>
                         <?php else: ?>
