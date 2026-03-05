@@ -92,14 +92,13 @@ if (!empty($year_filter)) {
 $where_clause = "WHERE " . implode(" AND ", $where_conditions);
 
 // Count total
-$count_query = "SELECT COUNT(*) as total FROM complaints c
-                LEFT JOIN users u ON c.user_id = u.user_id
-                $where_clause";
 $stmt = $conn->prepare($count_query);
-if (!empty($params)) {
+if (!empty($params) && !empty($types)) {
     $stmt->bind_param($types, ...$params);
+    $stmt->execute();
+} else {
+    $stmt->execute();
 }
-$stmt->execute();
 $total_records = $stmt->get_result()->fetch_assoc()['total'];
 
 $total_pages = ceil($total_records / $records_per_page);
@@ -123,10 +122,12 @@ $params[] = $offset;
 $types .= "ii";
 
 $stmt = $conn->prepare($query);
-if (!empty($params)) {
+if (!empty($params) && !empty($types)) {
     $stmt->bind_param($types, ...$params);
+    $stmt->execute();
+} else {
+    $stmt->execute();
 }
-$stmt->execute();
 $complaints = $stmt->get_result();
 
 // Get categories for filter
