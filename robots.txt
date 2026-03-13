@@ -1,0 +1,18 @@
+User-agent: *
+
+# Allow public pages only
+Allow: /index.php
+Allow: /auth/login.php
+Allow: /auth/register.php
+Allow: /auth/forgot_password.php
+Allow: /assets/
+
+# Block all private/login-required areas
+Disallow: /admin/
+Disallow: /user/
+Disallow: /config/
+Disallow: /includes/
+Disallow: /uploads/
+
+# Sitemap location
+Sitemap: https://cmsnew-5ocg.onrender.com/sitemap.xml
