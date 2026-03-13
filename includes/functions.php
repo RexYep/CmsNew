@@ -812,13 +812,12 @@ function recordSuccessfulLogin($email, $ip_address)
 // Function to get client IP address
 function getClientIP()
 {
-    if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
-        return $_SERVER['HTTP_CLIENT_IP'];
-    } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-        return $_SERVER['HTTP_X_FORWARDED_FOR'];
-    } else {
-        return $_SERVER['REMOTE_ADDR'];
+    if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        // Take FIRST IP only — that's the real client IP
+        $ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+        return trim($ips[0]);
     }
+    return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
 }
 // Function to generate OTP
 function generateOTP($length = 6)

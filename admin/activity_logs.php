@@ -346,18 +346,20 @@ if ($suspicious->num_rows > 0):
                                 </td>
                                 <td>
                                     <small class="text-muted" title="<?php echo htmlspecialchars($log['user_agent'] ?? ''); ?>">
-                                        <?php
-                                            $ua = $log['user_agent'] ?? '';
-                                if (str_contains($ua, 'Chrome')) {
-                                    echo '<i class="bi bi-browser-chrome"></i> Chrome';
+                                       <?php
+                                        $ua = $log['user_agent'] ?? '';
+                                if (str_contains($ua, 'Edg/')) {
+                                    echo '<i class="bi bi-browser-edge"></i> Edge';
+                                } elseif (str_contains($ua, 'OPR/')) {
+                                    echo '<i class="bi bi-browser-chrome"></i> Opera';
                                 } elseif (str_contains($ua, 'Firefox')) {
                                     echo '<i class="bi bi-browser-firefox"></i> Firefox';
-                                } elseif (str_contains($ua, 'Safari')) {
+                                } elseif (str_contains($ua, 'Safari') && !str_contains($ua, 'Chrome')) {
                                     echo '<i class="bi bi-browser-safari"></i> Safari';
-                                } elseif (str_contains($ua, 'Edge')) {
-                                    echo '<i class="bi bi-browser-edge"></i> Edge';
+                                } elseif (str_contains($ua, 'Chrome')) {
+                                    echo '<i class="bi bi-browser-chrome"></i> Chrome/Brave';
                                 } else {
-                                    echo '<i class="bi bi-browser-chrome"></i> Unknown';
+                                    echo '<i class="bi bi-globe"></i> Unknown';
                                 }
                                 ?>
                                     </small>

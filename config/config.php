@@ -8,6 +8,7 @@ if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.cookie_samesite', 'Lax');
     ini_set('session.use_strict_mode', 1);
     session_start();
+    date_default_timezone_set('Asia/Manila');
 }
 use Cloudinary\Configuration\Configuration;
 

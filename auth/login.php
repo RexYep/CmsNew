@@ -18,7 +18,7 @@ $error   = '';
 $success = '';
 $result  = [];
 
-if (isset($_GET['error'])) {
+if (isset($_GET['error']) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
     if ($_GET['error'] === 'max_attempts') {
         $error = 'Too many incorrect verification attempts. Please login again.';
     } elseif ($_GET['error'] === 'session_expired') {
