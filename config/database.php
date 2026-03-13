@@ -4,18 +4,15 @@
 // config/database.php
 
 
-$host     = getenv('DATABASE_HOST') ?: 'localhost';
-$username = getenv('DATABASE_USER') ?: 'root';
-$password = getenv('DATABASE_PASSWORD') ?: 'Rynld.21';
-$dbname   = getenv('DATABASE_NAME') ?: 'complaint_management_system';
-$port     = (int)(getenv('DATABASE_PORT') ?: 3306);
+$host     = getenv('DATABASE_HOST') ?: 'l';
+$username = getenv('DATABASE_USER') ?: '';
+$password = getenv('DATABASE_PASSWORD') ?: '';
+$dbname   = getenv('DATABASE_NAME') ?: '';
+$port     = (int)(getenv('DATABASE_PORT') ?: 0);
 
-// Detect if running in production (Render)
 $is_production = getenv('DATABASE_HOST') !== false;
 
 if ($is_production) {
-  
-    // PRODUCTION: Aiven MySQL with SSL
   
     $conn = mysqli_init();
 
