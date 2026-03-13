@@ -260,6 +260,21 @@ if (isset($_SESSION['user_id'])) {
     background: linear-gradient(90deg, transparent, var(--cyan), transparent);
     opacity: .6;
 }
+
+
+.nav-links a {
+    position: relative;
+}
+
+.nav-links a.active::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -3px;
+    width: 100%;
+    height: 2px;
+    background: var(--cyan);
+}
     </style>
 </head>
 <body>
@@ -571,6 +586,33 @@ if (isset($_SESSION['user_id'])) {
             if(t){ e.preventDefault(); window.scrollTo({top: t.offsetTop - 80, behavior: 'smooth'}); }
         });
     });
+
+    // NAVBAR ACTIVE SECTION HIGHLIGHT
+const sections = document.querySelectorAll("section[id]");
+const navItems = document.querySelectorAll(".nav-links a");
+
+window.addEventListener("scroll", () => {
+
+    let current = "";
+
+    sections.forEach(section => {
+        const sectionTop = section.offsetTop - 120;
+        const sectionHeight = section.offsetHeight;
+
+        if (window.scrollY >= sectionTop && window.scrollY < sectionTop + sectionHeight) {
+            current = section.getAttribute("id");
+        }
+    });
+
+    navItems.forEach(link => {
+        link.classList.remove("active");
+
+        if (link.getAttribute("href") === "#" + current) {
+            link.classList.add("active");
+        }
+    });
+
+});
 </script>
 </body>
 </html>

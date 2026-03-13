@@ -98,10 +98,10 @@ if (!empty($current_user['avatar_url'])) {
     <a href="<?php echo SITE_URL; ?>admin/pending_users.php" 
        class="<?php echo $current_page == 'pending_users.php' ? 'active' : ''; ?>">
         <i class="bi bi-hourglass-split"></i> Pending Approvals
-        <?php 
+        <?php
         $pending_count = $conn->query("SELECT COUNT(*) as count FROM users WHERE approval_status = 'pending' AND role = 'user'")->fetch_assoc()['count'];
-        if ($pending_count > 0): 
-        ?>
+                if ($pending_count > 0):
+                    ?>
             <span class="badge bg-warning text-dark ms-2"><?php echo $pending_count; ?></span>
         <?php endif; ?>
     </a>
@@ -124,6 +124,15 @@ if (!empty($current_user['avatar_url'])) {
                 </a>
             </li>
             <li>
+
+            <?php if (isSuperAdmin()): ?>
+<li>
+    <a href="<?php echo SITE_URL; ?>admin/activity_logs.php" 
+       class="<?php echo $current_page == 'activity_logs.php' ? 'active' : ''; ?>">
+        <i class="bi bi-shield-check"></i> Activity Logs
+    </a>
+</li>
+<?php endif; ?>
                 <a href="<?php echo SITE_URL; ?>admin/profile.php" 
                    class="<?php echo $current_page == 'profile.php' && $current_dir == 'admin' ? 'active' : ''; ?>">
                     <i class="bi bi-person"></i> My Profile
@@ -237,10 +246,10 @@ if (!empty($current_user['avatar_url'])) {
             </button>
             
             <!-- Notification Bell - always visible -->
-            <?php 
-            $unread_count = getUnreadNotificationCount($_SESSION['user_id']);
-            $recent_notifications = getRecentNotifications($_SESSION['user_id'], 5);
-            ?>
+            <?php
+                        $unread_count = getUnreadNotificationCount($_SESSION['user_id']);
+$recent_notifications = getRecentNotifications($_SESSION['user_id'], 5);
+?>
             <div class="dropdown">
                 <button class="btn btn-link position-relative p-0 notification-btn" type="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
                     <i class="bi bi-bell-fill" style="font-size: 1.3rem; color: #667eea;"></i>
@@ -269,11 +278,17 @@ if (!empty($current_user['avatar_url'])) {
                                     <div class="d-flex align-items-start">
                                         <div class="me-2">
                                             <?php
-                                            $icon_class = 'bi-info-circle text-info';
-                                            if ($notif['type'] == 'success') $icon_class = 'bi-check-circle text-success';
-                                            if ($notif['type'] == 'warning') $icon_class = 'bi-exclamation-triangle text-warning';
-                                            if ($notif['type'] == 'danger') $icon_class = 'bi-x-circle text-danger';
-                                            ?>
+                                $icon_class = 'bi-info-circle text-info';
+                            if ($notif['type'] == 'success') {
+                                $icon_class = 'bi-check-circle text-success';
+                            }
+                            if ($notif['type'] == 'warning') {
+                                $icon_class = 'bi-exclamation-triangle text-warning';
+                            }
+                            if ($notif['type'] == 'danger') {
+                                $icon_class = 'bi-x-circle text-danger';
+                            }
+                            ?>
                                             <i class="bi <?php echo $icon_class; ?>"></i>
                                         </div>
                                         <div class="flex-grow-1">
@@ -312,7 +327,7 @@ if (!empty($current_user['avatar_url'])) {
             <!-- User Profile - avatar visible on all screens, name/email hidden on mobile -->
             <?php
             // Note: $current_user is already defined at the top of navbar.php
-            ?>
+?>
 
             <div class="dropdown user-profile-dropdown">
                 <button class="btn btn-link p-0 d-flex align-items-center gap-2" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="text-decoration: none;">

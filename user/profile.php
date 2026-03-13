@@ -123,6 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
         $result = changePassword($user_id, $current_password, $new_password);
 
         if ($result['success']) {
+            logActivity('password_changed', 'User changed their password');
             $success = $result['message'];
         } else {
             $error = $result['message'];

@@ -16,6 +16,7 @@ if (!isset($_SESSION['2fa_user_id'])) {
 
 // Already fully logged in
 if (isLoggedIn()) {
+    logActivity('login_success', 'Logged in');
     header("Location: ../user/index.php");
     exit();
 }
@@ -78,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verify_code'])) {
         if (isset($_POST['trust_device']) && $_POST['trust_device'] === '1') {
             saveTrustedDevice($user_id);
         }
-
+        logActivity('login_success', 'Logged in via 2FA verification');
         header("Location: ../user/index.php");
         exit();
 
@@ -86,6 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verify_code'])) {
         // Too many attempts — back to login
         session_unset();
         session_destroy();
+        logActivity('login_failed', 'Too many incorrect 2FA attempts', $user_id);
         header("Location: login.php?error=max_attempts");
         exit();
     } else {

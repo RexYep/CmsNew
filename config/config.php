@@ -3,18 +3,25 @@
 // config/config.php
 
 if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.cookie_httponly', 1);
+    ini_set('session.cookie_secure', 1);
+    ini_set('session.cookie_samesite', 'Lax');
+    ini_set('session.use_strict_mode', 1);
     session_start();
 }
 use Cloudinary\Configuration\Configuration;
-
 
 $env_file = dirname(__DIR__) . '/.env';
 if (file_exists($env_file)) {
     $lines = file($env_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
-      
-        if (strpos(trim($line), '#') === 0) continue;
-        if (strpos($line, '=') === false) continue;
+
+        if (strpos(trim($line), '#') === 0) {
+            continue;
+        }
+        if (strpos($line, '=') === false) {
+            continue;
+        }
 
         [$key, $value] = explode('=', $line, 2);
         $key   = trim($key);
@@ -27,30 +34,30 @@ if (file_exists($env_file)) {
     }
 }
 // Path Settings
-define('BASE_PATH',     dirname(__DIR__) . '/');
+define('BASE_PATH', dirname(__DIR__) . '/');
 define('INCLUDES_PATH', BASE_PATH . 'includes/');
-define('ASSETS_PATH',   BASE_PATH . 'assets/');
+define('ASSETS_PATH', BASE_PATH . 'assets/');
 
 
 // APPLICATION SETTINGS
 define('SITE_NAME', 'Complaint Management System');
-define('SITE_URL',  getenv('SITE_URL') ?: 'http://localhost/cms3/');
+define('SITE_URL', getenv('SITE_URL') ?: 'http://localhost/cms3/');
 define('ADMIN_EMAIL', 'cmsprop233@gmail.com');
 
 
 // User Roles
-define('ROLE_USER',  'user');
+define('ROLE_USER', 'user');
 define('ROLE_ADMIN', 'admin');
 
-define('STATUS_PENDING',     'Pending');
+define('STATUS_PENDING', 'Pending');
 define('STATUS_IN_PROGRESS', 'In Progress');
-define('STATUS_RESOLVED',    'Resolved');
-define('STATUS_CLOSED',      'Closed');
+define('STATUS_RESOLVED', 'Resolved');
+define('STATUS_CLOSED', 'Closed');
 
 // Complaint Priority
-define('PRIORITY_LOW',    'Low');
+define('PRIORITY_LOW', 'Low');
 define('PRIORITY_MEDIUM', 'Medium');
-define('PRIORITY_HIGH',   'High');
+define('PRIORITY_HIGH', 'High');
 
 // Pagination Settings
 define('RECORDS_PER_PAGE', 10);
@@ -60,11 +67,11 @@ define('DAILY_COMPLAINT_LIMIT', 5);
 
 // Login Security Settings
 define('MAX_LOGIN_ATTEMPTS', 5);  // Maximum failed attempts before lockout
-define('LOCKOUT_DURATION',   15); // Lockout duration in minutes
+define('LOCKOUT_DURATION', 15); // Lockout duration in minutes
 define('ATTEMPT_RESET_TIME', 30); // Reset failed attempts after X minutes
 
 define('CLOUDINARY_CLOUD_NAME', getenv('CLOUDINARY_CLOUD_NAME') ?: '');
-define('CLOUDINARY_API_KEY',    getenv('CLOUDINARY_API_KEY')    ?: '');
+define('CLOUDINARY_API_KEY', getenv('CLOUDINARY_API_KEY') ?: '');
 define('CLOUDINARY_API_SECRET', getenv('CLOUDINARY_API_SECRET') ?: '');
 
 
@@ -91,26 +98,31 @@ if (file_exists(INCLUDES_PATH . 'cloudinary_helper.php')) {
 require_once 'database.php';
 
 // HELPER FUNCTIONS
-function isLoggedIn() {
+function isLoggedIn()
+{
     return isset($_SESSION['user_id']) && isset($_SESSION['role']);
 }
 
-function isAdmin() {
+function isAdmin()
+{
     return isset($_SESSION['role']) && $_SESSION['role'] === ROLE_ADMIN;
 }
 
-function isUser() {
+function isUser()
+{
     return isset($_SESSION['role']) && $_SESSION['role'] === ROLE_USER;
 }
 
-function requireLogin() {
+function requireLogin()
+{
     if (!isLoggedIn()) {
         header("Location: " . SITE_URL . "auth/login.php");
         exit();
     }
 }
 
-function requireAdmin() {
+function requireAdmin()
+{
     requireLogin();
     if (!isAdmin()) {
         header("Location: " . SITE_URL . "user/index.php");
@@ -118,29 +130,34 @@ function requireAdmin() {
     }
 }
 
-function sanitizeInput($data) {
+function sanitizeInput($data)
+{
     $data = trim($data);
     $data = stripslashes($data);
     $data = htmlspecialchars($data);
     return $data;
 }
 
-function formatDate($date) {
+function formatDate($date)
+{
     return date('M d, Y', strtotime($date));
 }
 
-function formatDateTime($datetime) {
+function formatDateTime($datetime)
+{
     return date('M d, Y h:i A', strtotime($datetime));
 }
 
-function daysElapsed($date) {
+function daysElapsed($date)
+{
     $start    = new DateTime($date);
     $end      = new DateTime();
     $interval = $start->diff($end);
     return $interval->days;
 }
 
-function getStatusBadge($status) {
+function getStatusBadge($status)
+{
     $badges = [
         'Pending'     => 'badge bg-warning text-dark',
         'Assigned'    => 'badge bg-info',
@@ -152,7 +169,8 @@ function getStatusBadge($status) {
     return $badges[$status] ?? 'badge bg-secondary';
 }
 
-function getPriorityBadge($priority) {
+function getPriorityBadge($priority)
+{
     switch ($priority) {
         case PRIORITY_LOW:    return 'badge bg-success';
         case PRIORITY_MEDIUM: return 'badge bg-warning text-dark';
@@ -160,4 +178,3 @@ function getPriorityBadge($priority) {
         default:              return 'badge bg-secondary';
     }
 }
-?>

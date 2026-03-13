@@ -1,4 +1,5 @@
 <?php
+
 // ============================================
 // HELPER FUNCTIONS
 // includes/functions.php
@@ -24,11 +25,32 @@ function isValidPhone($phone)
 // Function to validate password strength
 function isStrongPassword($password)
 {
-    // At least 8 characters, one uppercase, one lowercase, one number
+    // At least 8 characters, one uppercase, one lowercase, one number, one special character
     return strlen($password) >= 8 &&
         preg_match('/[A-Z]/', $password) &&
         preg_match('/[a-z]/', $password) &&
-        preg_match('/[0-9]/', $password);
+        preg_match('/[0-9]/', $password) &&
+        preg_match('/[\W_]/', $password);
+}
+
+function logActivity($action, $description = '', $user_id = null)
+{
+    global $conn;
+
+    // Use logged-in user if no user_id provided
+    if ($user_id === null) {
+        $user_id = $_SESSION['user_id'] ?? null;
+    }
+
+    $ip         = getClientIP();
+    $user_agent = substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 255);
+
+    $stmt = $conn->prepare("
+        INSERT INTO activity_logs (user_id, action, description, ip_address, user_agent)
+        VALUES (?, ?, ?, ?, ?)
+    ");
+    $stmt->bind_param("issss", $user_id, $action, $description, $ip, $user_agent);
+    $stmt->execute();
 }
 
 // Function to hash password
@@ -90,9 +112,9 @@ function registerUser($full_name, $email, $phone, $password, $address = '', $pro
     $hashed_password = hashPassword($password);
 
     // Insert user with pending approval status
-$approval_status = 'pending'; // Users need approval
-$stmt = $conn->prepare("INSERT INTO users (full_name, email, phone, password, role, approval_status, address, proof_photo, proof_photo_public_id) VALUES (?, ?, ?, ?, 'user', ?, ?, ?, ?)");
-$stmt->bind_param("ssssssss", $full_name, $email, $phone, $hashed_password, $approval_status, $address, $proof_photo, $proof_photo_public_id);
+    $approval_status = 'pending'; // Users need approval
+    $stmt = $conn->prepare("INSERT INTO users (full_name, email, phone, password, role, approval_status, address, proof_photo, proof_photo_public_id) VALUES (?, ?, ?, ?, 'user', ?, ?, ?, ?)");
+    $stmt->bind_param("ssssssss", $full_name, $email, $phone, $hashed_password, $approval_status, $address, $proof_photo, $proof_photo_public_id);
 
     if ($stmt->execute()) {
         return ['success' => true, 'message' => 'Registration successful'];
@@ -216,7 +238,7 @@ function logoutUser()
     session_destroy();
 
     if ($role === 'admin') {
-        header("Location: " . SITE_URL . "admin/login.php"); 
+        header("Location: " . SITE_URL . "admin/login.php");
     } else {
         header("Location: " . SITE_URL . "auth/login.php");
     }
@@ -478,8 +500,8 @@ function sendEmailBrevoAPI($to, $subject, $message)
         'sender'     => ['email' => $from_email, 'name' => $from_name],
         'to'         => [['email' => $to]],
         'subject'    => $subject,
-        'htmlContent'=> $message,
-        'textContent'=> strip_tags($message)
+        'htmlContent' => $message,
+        'textContent' => strip_tags($message)
     ];
 
     $ch = curl_init('https://api.brevo.com/v3/smtp/email');
@@ -521,10 +543,10 @@ function sendEmailSMTP($to, $subject, $message)
 
     try {
         $mail->isSMTP();
-        $mail->Host       = getenv('MAIL_HOST')     ?: 'smtp.gmail.com';
+        $mail->Host       = getenv('MAIL_HOST') ?: 'smtp.gmail.com';
         $mail->SMTPAuth   = true;
-        $mail->Username   = getenv('MAIL_USERNAME')  ?: 'cmsproperty@gmail.com';
-        $mail->Password   = getenv('MAIL_PASSWORD')  ?: '';
+        $mail->Username   = getenv('MAIL_USERNAME') ?: 'cmsproperty@gmail.com';
+        $mail->Password   = getenv('MAIL_PASSWORD') ?: '';
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port       = (int)(getenv('MAIL_PORT') ?: 587);
         $mail->Timeout    = 30;
@@ -856,7 +878,7 @@ function createPasswordResetRequest($email)
     $stmt->execute();
 
     // Insert new reset request
- // Carry over resend count if within window, otherwise reset
+    // Carry over resend count if within window, otherwise reset
     $new_resend_count = ($existing && (time() - strtotime($existing['last_resend_at'])) / 60 < $resend_window)
         ? $existing['resend_count'] + 1
         : 1;
@@ -1213,22 +1235,22 @@ function getUserAvatar($user_id = null, $size = 'md')
 function deleteUserAccount($user_id)
 {
     global $conn;
-    
+
     // Start transaction
     $conn->begin_transaction();
-    
+
     try {
         // Get user info before deletion
         $stmt = $conn->prepare("SELECT email, full_name, profile_picture FROM users WHERE user_id = ?");
         $stmt->bind_param("i", $user_id);
         $stmt->execute();
         $user = $stmt->get_result()->fetch_assoc();
-        
+
         // 1. Delete profile picture file if exists
         if ($user['profile_picture'] && file_exists(dirname(__DIR__) . '/' . $user['profile_picture'])) {
             unlink(dirname(__DIR__) . '/' . $user['profile_picture']);
         }
-        
+
         // 2. Delete complaint attachments files and records
         $stmt = $conn->prepare("
             SELECT ca.file_path 
@@ -1239,13 +1261,13 @@ function deleteUserAccount($user_id)
         $stmt->bind_param("i", $user_id);
         $stmt->execute();
         $attachments = $stmt->get_result();
-        
+
         while ($attachment = $attachments->fetch_assoc()) {
             if (file_exists(dirname(__DIR__) . '/' . $attachment['file_path'])) {
                 unlink(dirname(__DIR__) . '/' . $attachment['file_path']);
             }
         }
-        
+
         // 3. Delete complaint attachments records (CASCADE will handle this, but explicit is safer)
         $stmt = $conn->prepare("
             DELETE ca FROM complaint_attachments ca
@@ -1254,7 +1276,7 @@ function deleteUserAccount($user_id)
         ");
         $stmt->bind_param("i", $user_id);
         $stmt->execute();
-        
+
         // 4. Delete complaint comments (CASCADE will handle this)
         $stmt = $conn->prepare("
             DELETE cc FROM complaint_comments cc
@@ -1263,7 +1285,7 @@ function deleteUserAccount($user_id)
         ");
         $stmt->bind_param("i", $user_id);
         $stmt->execute();
-        
+
         // 5. Delete complaint history (CASCADE will handle this)
         $stmt = $conn->prepare("
             DELETE ch FROM complaint_history ch
@@ -1272,37 +1294,37 @@ function deleteUserAccount($user_id)
         ");
         $stmt->bind_param("i", $user_id);
         $stmt->execute();
-        
+
         // 6. Delete notifications
         $stmt = $conn->prepare("DELETE FROM notifications WHERE user_id = ?");
         $stmt->bind_param("i", $user_id);
         $stmt->execute();
-        
+
         // 7. Delete password reset tokens
         $stmt = $conn->prepare("DELETE FROM password_resets WHERE user_id = ?");
         $stmt->bind_param("i", $user_id);
         $stmt->execute();
-        
+
         // 8. Delete login attempts
         $stmt = $conn->prepare("DELETE FROM login_attempts WHERE email = ?");
         $stmt->bind_param("s", $user['email']);
         $stmt->execute();
-        
+
         // 9. Delete all complaints (CASCADE will handle related records)
         $stmt = $conn->prepare("DELETE FROM complaints WHERE user_id = ?");
         $stmt->bind_param("i", $user_id);
         $stmt->execute();
-        
+
         // 10. Finally, delete the user
         $stmt = $conn->prepare("DELETE FROM users WHERE user_id = ?");
         $stmt->bind_param("i", $user_id);
         $stmt->execute();
-        
+
         // Commit transaction
         $conn->commit();
-        
+
         return ['success' => true, 'message' => 'Account deleted successfully'];
-        
+
     } catch (Exception $e) {
         // Rollback on error
         $conn->rollback();
@@ -1358,7 +1380,7 @@ function sendAccountDeletionEmail($email, $name)
     </body>
     </html>
     ";
-    
+
     return sendEmail($email, $subject, $message);
 }
 
@@ -1369,17 +1391,18 @@ function sendAccountDeletionEmail($email, $name)
 /**
  * Check if status transition is allowed
  */
-function canChangeStatus($current_status, $new_status, $is_super_admin = false) {
+function canChangeStatus($current_status, $new_status, $is_super_admin = false)
+{
     global $conn;
-    
+
     // Same status - no change needed
     if ($current_status === $new_status) {
         return [
-        'allowed' => false, 
+        'allowed' => false,
         'message' => "Status is already '$current_status'. Please select a different status to update."
     ];
     }
-    
+
     // Check if transition exists in rules (forward direction)
     $stmt = $conn->prepare("
         SELECT can_reverse 
@@ -1389,7 +1412,7 @@ function canChangeStatus($current_status, $new_status, $is_super_admin = false) 
     $stmt->bind_param("ss", $current_status, $new_status);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     if ($result->num_rows === 0) {
         // Not a valid forward progression - check if it's a reverse
         $stmt = $conn->prepare("
@@ -1400,17 +1423,17 @@ function canChangeStatus($current_status, $new_status, $is_super_admin = false) 
         $stmt->bind_param("ss", $new_status, $current_status);
         $stmt->execute();
         $reverse_result = $stmt->get_result();
-        
+
         if ($reverse_result->num_rows === 0) {
             return [
-                'allowed' => false, 
+                'allowed' => false,
                 'message' => "Cannot change status from '$current_status' to '$new_status'. This transition is not allowed."
             ];
         }
-        
+
         // It's a reverse transition
         $reverse_rule = $reverse_result->fetch_assoc();
-        
+
         if ($reverse_rule['can_reverse'] == 0) {
             // Cannot reverse at all
             return [
@@ -1427,7 +1450,7 @@ function canChangeStatus($current_status, $new_status, $is_super_admin = false) 
             }
         }
     }
-    
+
     // Valid progression - allowed
     return ['allowed' => true, 'message' => 'Status change allowed'];
 }
@@ -1435,9 +1458,10 @@ function canChangeStatus($current_status, $new_status, $is_super_admin = false) 
 /**
  * Get allowed next statuses for current status
  */
-function getAllowedNextStatuses($current_status, $is_super_admin = false) {
+function getAllowedNextStatuses($current_status, $is_super_admin = false)
+{
     global $conn;
-    
+
     $stmt = $conn->prepare("
         SELECT allowed_next_status, can_reverse 
         FROM status_progression_rules 
@@ -1446,7 +1470,7 @@ function getAllowedNextStatuses($current_status, $is_super_admin = false) {
     $stmt->bind_param("s", $current_status);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     $allowed = [];
     while ($row = $result->fetch_assoc()) {
         $allowed[] = [
@@ -1454,16 +1478,17 @@ function getAllowedNextStatuses($current_status, $is_super_admin = false) {
             'can_reverse' => $row['can_reverse']
         ];
     }
-    
+
     return $allowed;
 }
 
 /**
  * Check if admin can modify complaint
  */
-function canAdminModifyComplaint($complaint_id, $admin_id, $is_super_admin) {
- global $conn;
-    
+function canAdminModifyComplaint($complaint_id, $admin_id, $is_super_admin)
+{
+    global $conn;
+
     $stmt = $conn->prepare("
         SELECT assigned_to, assigned_by, status, is_locked 
         FROM complaints 
@@ -1472,39 +1497,39 @@ function canAdminModifyComplaint($complaint_id, $admin_id, $is_super_admin) {
     $stmt->bind_param("i", $complaint_id);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     if ($result->num_rows === 0) {
         return ['can_modify' => false, 'reason' => 'Complaint not found'];
     }
-    
+
     $complaint = $result->fetch_assoc();
-    
+
     // Check if complaint is locked (HIGHEST PRIORITY - blocks everyone including Super Admin)
     if ($complaint['is_locked'] == 1) {
         return [
-            'can_modify' => false, 
+            'can_modify' => false,
             'reason' => 'This complaint is LOCKED by Super Admin. No modifications allowed until unlocked.'
         ];
     }
-    
+
     // Check if complaint is closed
     if ($complaint['status'] === 'Closed') {
         return [
-            'can_modify' => false, 
+            'can_modify' => false,
             'reason' => 'This complaint is closed and cannot be modified. User has confirmed the resolution.'
         ];
-    }   
+    }
 
     $stmt->bind_param("i", $complaint_id);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     if ($result->num_rows === 0) {
         return ['can_modify' => false, 'reason' => 'Complaint not found'];
     }
-    
+
     $complaint = $result->fetch_assoc();
-    
+
     // Complaint not assigned yet
     if (empty($complaint['assigned_to'])) {
         if ($is_super_admin) {
@@ -1513,22 +1538,22 @@ function canAdminModifyComplaint($complaint_id, $admin_id, $is_super_admin) {
             return ['can_modify' => false, 'reason' => 'This complaint has not been assigned yet. Only Super Admin can assign complaints.'];
         }
     }
-    
+
     // Super admin assigned to themselves
     if ($is_super_admin && $complaint['assigned_to'] == $admin_id) {
         return ['can_modify' => true, 'reason' => ''];
     }
-    
+
     // Super admin trying to modify someone else's complaint
     if ($is_super_admin && $complaint['assigned_to'] != $admin_id) {
         return ['can_modify' => false, 'reason' => 'This complaint is assigned to another admin. Only the assigned admin can modify it.'];
     }
-    
+
     // Regular admin checking their own assignment
     if ($complaint['assigned_to'] == $admin_id) {
         return ['can_modify' => true, 'reason' => ''];
     }
-    
+
     // Regular admin trying to modify someone else's complaint
     return ['can_modify' => false, 'reason' => 'This complaint is assigned to another admin.'];
 }
@@ -1536,18 +1561,19 @@ function canAdminModifyComplaint($complaint_id, $admin_id, $is_super_admin) {
 /**
  * Record assignment in history
  */
-function recordAssignment($complaint_id, $assigned_by, $assigned_to, $note = '') {
+function recordAssignment($complaint_id, $assigned_by, $assigned_to, $note = '')
+{
     global $conn;
-    
+
     // Get previous assignment
     $stmt = $conn->prepare("SELECT assigned_to FROM complaints WHERE complaint_id = ?");
     $stmt->bind_param("i", $complaint_id);
     $stmt->execute();
     $result = $stmt->get_result();
     $prev_assigned = $result->fetch_assoc()['assigned_to'] ?? null;
-    
+
     $action_type = empty($prev_assigned) ? 'assigned' : 'reassigned';
-    
+
     // Insert into assignment_history
     $stmt = $conn->prepare("
         INSERT INTO assignment_history 
@@ -1555,16 +1581,17 @@ function recordAssignment($complaint_id, $assigned_by, $assigned_to, $note = '')
         VALUES (?, ?, ?, ?, ?, ?)
     ");
     $stmt->bind_param("iiiiss", $complaint_id, $assigned_by, $prev_assigned, $assigned_to, $note, $action_type);
-    
+
     return $stmt->execute();
 }
 
 /**
  * Get admin workload (number of active complaints)
  */
-function getAdminWorkload($admin_id) {
+function getAdminWorkload($admin_id)
+{
     global $conn;
-    
+
     $stmt = $conn->prepare("
         SELECT COUNT(*) as count 
         FROM complaints 
@@ -1573,16 +1600,17 @@ function getAdminWorkload($admin_id) {
     ");
     $stmt->bind_param("i", $admin_id);
     $stmt->execute();
-    
+
     return (int)$stmt->get_result()->fetch_assoc()['count'];
 }
 
 /**
  * Get all admins with their workload
  */
-function getAdminsWithWorkload() {
+function getAdminsWithWorkload()
+{
     global $conn;
-    
+
     $result = $conn->query("
         SELECT 
             u.user_id,
@@ -1602,12 +1630,12 @@ function getAdminsWithWorkload() {
         GROUP BY u.user_id, u.full_name, u.admin_level, u.email
         ORDER BY active_complaints ASC, u.full_name ASC
     ");
-    
+
     $admins = [];
     while ($row = $result->fetch_assoc()) {
         $admins[] = $row;
     }
-    
+
     return $admins;
 }
 
@@ -1618,13 +1646,14 @@ function getAdminsWithWorkload() {
 /**
  * Create reopen request
  */
-function createReopenRequest($complaint_id, $user_id, $reason) {
+function createReopenRequest($complaint_id, $user_id, $reason)
+{
     global $conn;
-    
+
     if (empty($reason)) {
         return ['success' => false, 'message' => 'Reason is required'];
     }
-    
+
     // Check if there's already a pending request
     $stmt = $conn->prepare("
         SELECT reopen_id FROM reopen_requests 
@@ -1632,31 +1661,32 @@ function createReopenRequest($complaint_id, $user_id, $reason) {
     ");
     $stmt->bind_param("i", $complaint_id);
     $stmt->execute();
-    
+
     if ($stmt->get_result()->num_rows > 0) {
         return ['success' => false, 'message' => 'A reopen request is already pending for this complaint'];
     }
-    
+
     // Create reopen request
     $stmt = $conn->prepare("
         INSERT INTO reopen_requests (complaint_id, requested_by, reason) 
         VALUES (?, ?, ?)
     ");
     $stmt->bind_param("iis", $complaint_id, $user_id, $reason);
-    
+
     if ($stmt->execute()) {
         return ['success' => true, 'message' => 'Reopen request submitted successfully'];
     }
-    
+
     return ['success' => false, 'message' => 'Failed to submit reopen request'];
 }
 
 /**
  * Get pending reopen requests for a complaint
  */
-function getPendingReopenRequest($complaint_id) {
+function getPendingReopenRequest($complaint_id)
+{
     global $conn;
-    
+
     $stmt = $conn->prepare("
         SELECT r.*, u.full_name as requester_name 
         FROM reopen_requests r
@@ -1668,16 +1698,17 @@ function getPendingReopenRequest($complaint_id) {
     $stmt->bind_param("i", $complaint_id);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     return $result->num_rows > 0 ? $result->fetch_assoc() : null;
 }
 
 /**
  * Get all reopen requests for a complaint
  */
-function getAllReopenRequests($complaint_id) {
+function getAllReopenRequests($complaint_id)
+{
     global $conn;
-    
+
     $stmt = $conn->prepare("
         SELECT r.*, 
                u.full_name as requester_name,
@@ -1690,16 +1721,17 @@ function getAllReopenRequests($complaint_id) {
     ");
     $stmt->bind_param("i", $complaint_id);
     $stmt->execute();
-    
+
     return $stmt->get_result();
 }
 
 /**
  * Approve reopen request
  */
-function approveReopenRequest($reopen_id, $admin_id, $review_note = '') {
+function approveReopenRequest($reopen_id, $admin_id, $review_note = '')
+{
     global $conn;
-    
+
     // Get reopen request details
     $stmt = $conn->prepare("
         SELECT r.complaint_id, r.requested_by, r.reason, c.assigned_to 
@@ -1710,15 +1742,15 @@ function approveReopenRequest($reopen_id, $admin_id, $review_note = '') {
     $stmt->bind_param("i", $reopen_id);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     if ($result->num_rows === 0) {
         return ['success' => false, 'message' => 'Reopen request not found or already processed'];
     }
-    
+
     $request = $result->fetch_assoc();
-    
+
     $conn->begin_transaction();
-    
+
     try {
         // Update reopen request status
         $stmt = $conn->prepare("
@@ -1731,7 +1763,7 @@ function approveReopenRequest($reopen_id, $admin_id, $review_note = '') {
         ");
         $stmt->bind_param("isi", $admin_id, $review_note, $reopen_id);
         $stmt->execute();
-        
+
         // Reopen the complaint
         $stmt = $conn->prepare("
             UPDATE complaints 
@@ -1742,7 +1774,7 @@ function approveReopenRequest($reopen_id, $admin_id, $review_note = '') {
         ");
         $stmt->bind_param("i", $request['complaint_id']);
         $stmt->execute();
-        
+
         // Log to history
         $stmt = $conn->prepare("
             INSERT INTO complaint_history 
@@ -1752,10 +1784,10 @@ function approveReopenRequest($reopen_id, $admin_id, $review_note = '') {
         $comment = "Reopen request approved by admin. User's reason: " . $request['reason'];
         $stmt->bind_param("iis", $request['complaint_id'], $admin_id, $comment);
         $stmt->execute();
-        
+
         $conn->commit();
         return ['success' => true, 'message' => 'Reopen request approved and complaint reopened'];
-        
+
     } catch (Exception $e) {
         $conn->rollback();
         return ['success' => false, 'message' => 'Failed to approve reopen request: ' . $e->getMessage()];
@@ -1765,13 +1797,14 @@ function approveReopenRequest($reopen_id, $admin_id, $review_note = '') {
 /**
  * Reject reopen request
  */
-function rejectReopenRequest($reopen_id, $admin_id, $review_note) {
+function rejectReopenRequest($reopen_id, $admin_id, $review_note)
+{
     global $conn;
-    
+
     if (empty($review_note)) {
         return ['success' => false, 'message' => 'Please provide a reason for rejection'];
     }
-    
+
     $stmt = $conn->prepare("
         UPDATE reopen_requests 
         SET status = 'rejected', 
@@ -1781,50 +1814,51 @@ function rejectReopenRequest($reopen_id, $admin_id, $review_note) {
         WHERE reopen_id = ? AND status = 'pending'
     ");
     $stmt->bind_param("isi", $admin_id, $review_note, $reopen_id);
-    
+
     if ($stmt->execute() && $stmt->affected_rows > 0) {
         return ['success' => true, 'message' => 'Reopen request rejected'];
     }
-    
+
     return ['success' => false, 'message' => 'Failed to reject request or request already processed'];
 }
 
 /**
  * Create admin account (auto-approved)
  */
-function createAdminAccount($full_name, $email, $phone, $password, $admin_level, $created_by) {
+function createAdminAccount($full_name, $email, $phone, $password, $admin_level, $created_by)
+{
     global $conn;
-    
+
     // Validate inputs
     if (empty($full_name) || empty($email) || empty($password)) {
         return ['success' => false, 'message' => 'All required fields must be filled'];
     }
-    
+
     if (!isValidEmail($email)) {
         return ['success' => false, 'message' => 'Invalid email format'];
     }
-    
+
     if (!empty($phone) && !isValidPhone($phone)) {
         return ['success' => false, 'message' => 'Invalid phone number format'];
     }
-    
+
     if (!isStrongPassword($password)) {
         return ['success' => false, 'message' => 'Password must be at least 8 characters with uppercase, lowercase, and numbers'];
     }
-    
+
     // Check if email already exists
     $stmt = $conn->prepare("SELECT user_id FROM users WHERE email = ?");
     $stmt->bind_param("s", $email);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     if ($result->num_rows > 0) {
         return ['success' => false, 'message' => 'Email already registered'];
     }
-    
+
     // Hash password
     $hashed_password = hashPassword($password);
-    
+
     // Insert admin with automatic approval
     $approval_status = 'approved'; // Auto-approve since created by Super Admin
     $stmt = $conn->prepare("
@@ -1833,15 +1867,15 @@ function createAdminAccount($full_name, $email, $phone, $password, $admin_level,
         VALUES (?, ?, ?, ?, 'admin', ?, 'active', ?)
     ");
     $stmt->bind_param("ssssss", $full_name, $email, $phone, $hashed_password, $admin_level, $approval_status);
-    
+
     if ($stmt->execute()) {
         $new_admin_id = $conn->insert_id;
-        
+
         // Log the creation in complaint_history or create an admin_actions table
         // (Optional: track who created which admin)
-        
+
         return [
-            'success' => true, 
+            'success' => true,
             'message' => 'Admin account created successfully and automatically approved',
             'admin_id' => $new_admin_id
         ];
@@ -1857,13 +1891,14 @@ function createAdminAccount($full_name, $email, $phone, $password, $admin_level,
 /**
  * Lock a complaint (Super Admin only)
  */
-function lockComplaint($complaint_id, $admin_id, $reason) {
+function lockComplaint($complaint_id, $admin_id, $reason)
+{
     global $conn;
-    
+
     if (empty($reason)) {
         return ['success' => false, 'message' => 'Please provide a reason for locking this complaint.'];
     }
-    
+
     $stmt = $conn->prepare("
         UPDATE complaints 
         SET is_locked = 1,
@@ -1873,7 +1908,7 @@ function lockComplaint($complaint_id, $admin_id, $reason) {
         WHERE complaint_id = ?
     ");
     $stmt->bind_param("isi", $admin_id, $reason, $complaint_id);
-    
+
     if ($stmt->execute()) {
         // Log to history
         $stmt = $conn->prepare("
@@ -1886,36 +1921,37 @@ function lockComplaint($complaint_id, $admin_id, $reason) {
         $stmt->execute();
 
         // Notify assigned admin about lock
-$stmt_check = $conn->prepare("SELECT assigned_to, user_id FROM complaints WHERE complaint_id = ?");
-$stmt_check->bind_param("i", $complaint_id);
-$stmt_check->execute();
-$complaint_data = $stmt_check->get_result()->fetch_assoc();
+        $stmt_check = $conn->prepare("SELECT assigned_to, user_id FROM complaints WHERE complaint_id = ?");
+        $stmt_check->bind_param("i", $complaint_id);
+        $stmt_check->execute();
+        $complaint_data = $stmt_check->get_result()->fetch_assoc();
 
-if (!empty($complaint_data['assigned_to'])) {
-    createEnhancedNotification([
-        'user_id' => $complaint_data['assigned_to'],
-        'title' => "🔒 Complaint Locked",
-        'message' => "Complaint #$complaint_id has been locked by Super Admin.\n\n📝 Reason: $reason\n\n⚠️ No modifications can be made until unlocked.",
-        'type' => 'warning',
-        'complaint_id' => $complaint_id,
-        'reference_type' => 'lock',
-        'action_url' => "complaint_details.php?id=$complaint_id",
-        'metadata' => ['reason' => $reason]
-    ]);
-}
-        
+        if (!empty($complaint_data['assigned_to'])) {
+            createEnhancedNotification([
+                'user_id' => $complaint_data['assigned_to'],
+                'title' => "🔒 Complaint Locked",
+                'message' => "Complaint #$complaint_id has been locked by Super Admin.\n\n📝 Reason: $reason\n\n⚠️ No modifications can be made until unlocked.",
+                'type' => 'warning',
+                'complaint_id' => $complaint_id,
+                'reference_type' => 'lock',
+                'action_url' => "complaint_details.php?id=$complaint_id",
+                'metadata' => ['reason' => $reason]
+            ]);
+        }
+
         return ['success' => true, 'message' => 'Complaint locked successfully.'];
     }
-    
+
     return ['success' => false, 'message' => 'Failed to lock complaint.'];
 }
 
 /**
  * Unlock a complaint (Super Admin only)
  */
-function unlockComplaint($complaint_id, $admin_id, $reason = '') {
+function unlockComplaint($complaint_id, $admin_id, $reason = '')
+{
     global $conn;
-    
+
     $stmt = $conn->prepare("
         UPDATE complaints 
         SET is_locked = 0,
@@ -1925,7 +1961,7 @@ function unlockComplaint($complaint_id, $admin_id, $reason = '') {
         WHERE complaint_id = ?
     ");
     $stmt->bind_param("i", $complaint_id);
-    
+
     if ($stmt->execute()) {
         // Log to history
         $stmt = $conn->prepare("
@@ -1938,41 +1974,42 @@ function unlockComplaint($complaint_id, $admin_id, $reason = '') {
         $stmt->execute();
 
         // Notify assigned admin about unlock
-$stmt_check = $conn->prepare("SELECT assigned_to FROM complaints WHERE complaint_id = ?");
-$stmt_check->bind_param("i", $complaint_id);
-$stmt_check->execute();
-$complaint_data = $stmt_check->get_result()->fetch_assoc();
+        $stmt_check = $conn->prepare("SELECT assigned_to FROM complaints WHERE complaint_id = ?");
+        $stmt_check->bind_param("i", $complaint_id);
+        $stmt_check->execute();
+        $complaint_data = $stmt_check->get_result()->fetch_assoc();
 
-if (!empty($complaint_data['assigned_to'])) {
-    createEnhancedNotification([
-        'user_id' => $complaint_data['assigned_to'],
-        'title' => "🔓 Complaint Unlocked",
-        'message' => "Complaint #$complaint_id has been unlocked by Super Admin. You can now modify it." . (!empty($reason) ? "\n\n📝 Note: $reason" : ""),
-        'type' => 'success',
-        'complaint_id' => $complaint_id,
-        'reference_type' => 'unlock',
-        'action_url' => "complaint_details.php?id=$complaint_id",
-        'metadata' => ['reason' => $reason]
-    ]);
-}
-        
+        if (!empty($complaint_data['assigned_to'])) {
+            createEnhancedNotification([
+                'user_id' => $complaint_data['assigned_to'],
+                'title' => "🔓 Complaint Unlocked",
+                'message' => "Complaint #$complaint_id has been unlocked by Super Admin. You can now modify it." . (!empty($reason) ? "\n\n📝 Note: $reason" : ""),
+                'type' => 'success',
+                'complaint_id' => $complaint_id,
+                'reference_type' => 'unlock',
+                'action_url' => "complaint_details.php?id=$complaint_id",
+                'metadata' => ['reason' => $reason]
+            ]);
+        }
+
         return ['success' => true, 'message' => 'Complaint unlocked successfully.'];
     }
-    
+
     return ['success' => false, 'message' => 'Failed to unlock complaint.'];
 }
 
 /**
  * Check if complaint is locked
  */
-function isComplaintLocked($complaint_id) {
+function isComplaintLocked($complaint_id)
+{
     global $conn;
-    
+
     $stmt = $conn->prepare("SELECT is_locked FROM complaints WHERE complaint_id = ?");
     $stmt->bind_param("i", $complaint_id);
     $stmt->execute();
     $result = $stmt->get_result()->fetch_assoc();
-    
+
     return $result && $result['is_locked'] == 1;
 }
 
@@ -1983,9 +2020,10 @@ function isComplaintLocked($complaint_id) {
 /**
  * Record reassignment in history
  */
-function recordReassignment($complaint_id, $old_admin_id, $new_admin_id, $reassigned_by, $reason) {
+function recordReassignment($complaint_id, $old_admin_id, $new_admin_id, $reassigned_by, $reason)
+{
     global $conn;
-    
+
     // Insert into reassignment_history table
     $stmt = $conn->prepare("
         INSERT INTO reassignment_history 
@@ -1994,7 +2032,7 @@ function recordReassignment($complaint_id, $old_admin_id, $new_admin_id, $reassi
     ");
     $stmt->bind_param("iiiis", $complaint_id, $old_admin_id, $new_admin_id, $reassigned_by, $reason);
     $stmt->execute();
-    
+
     // Update reassignment count and reason in complaints table
     $stmt = $conn->prepare("
         UPDATE complaints 
@@ -2004,16 +2042,17 @@ function recordReassignment($complaint_id, $old_admin_id, $new_admin_id, $reassi
     ");
     $stmt->bind_param("si", $reason, $complaint_id);
     $stmt->execute();
-    
+
     return true;
 }
 
 /**
  * Get reassignment history for a complaint
  */
-function getReassignmentHistory($complaint_id) {
+function getReassignmentHistory($complaint_id)
+{
     global $conn;
-    
+
     $stmt = $conn->prepare("
         SELECT rh.*,
                old_admin.full_name as old_admin_name,
@@ -2028,16 +2067,17 @@ function getReassignmentHistory($complaint_id) {
     ");
     $stmt->bind_param("i", $complaint_id);
     $stmt->execute();
-    
+
     return $stmt->get_result();
 }
 
 /**
  * Get reassignment statistics for an admin
  */
-function getAdminReassignmentStats($admin_id) {
+function getAdminReassignmentStats($admin_id)
+{
     global $conn;
-    
+
     // Times reassigned TO this admin
     $stmt = $conn->prepare("
         SELECT COUNT(*) as assigned_to_count 
@@ -2047,7 +2087,7 @@ function getAdminReassignmentStats($admin_id) {
     $stmt->bind_param("i", $admin_id);
     $stmt->execute();
     $assigned_to = $stmt->get_result()->fetch_assoc()['assigned_to_count'];
-    
+
     // Times reassigned FROM this admin
     $stmt = $conn->prepare("
         SELECT COUNT(*) as assigned_from_count 
@@ -2057,7 +2097,7 @@ function getAdminReassignmentStats($admin_id) {
     $stmt->bind_param("i", $admin_id);
     $stmt->execute();
     $assigned_from = $stmt->get_result()->fetch_assoc()['assigned_from_count'];
-    
+
     return [
         'assigned_to' => $assigned_to,
         'assigned_from' => $assigned_from,
@@ -2072,14 +2112,15 @@ function getAdminReassignmentStats($admin_id) {
 /**
  * Save user satisfaction rating
  */
-function saveUserRating($complaint_id, $user_id, $rating, $feedback = '') {
+function saveUserRating($complaint_id, $user_id, $rating, $feedback = '')
+{
     global $conn;
-    
+
     // Validate rating (1-5)
     if ($rating < 1 || $rating > 5) {
         return ['success' => false, 'message' => 'Invalid rating. Please select 1-5 stars.'];
     }
-    
+
     // Verify complaint belongs to user and is closed
     $stmt = $conn->prepare("
         SELECT status, user_id, assigned_to 
@@ -2089,19 +2130,19 @@ function saveUserRating($complaint_id, $user_id, $rating, $feedback = '') {
     $stmt->bind_param("i", $complaint_id);
     $stmt->execute();
     $complaint = $stmt->get_result()->fetch_assoc();
-    
+
     if (!$complaint) {
         return ['success' => false, 'message' => 'Complaint not found.'];
     }
-    
+
     if ($complaint['user_id'] != $user_id) {
         return ['success' => false, 'message' => 'You can only rate your own complaints.'];
     }
-    
+
     if ($complaint['status'] !== 'Closed') {
         return ['success' => false, 'message' => 'You can only rate closed complaints.'];
     }
-    
+
     // Save rating
     $stmt = $conn->prepare("
         UPDATE complaints 
@@ -2111,36 +2152,36 @@ function saveUserRating($complaint_id, $user_id, $rating, $feedback = '') {
         WHERE complaint_id = ?
     ");
     $stmt->bind_param("isi", $rating, $feedback, $complaint_id);
-    
+
     if ($stmt->execute()) {
-      // Notify assigned admin about the rating with enhanced notification
-if (!empty($complaint['assigned_to'])) {
-    $rating_emoji = ['1' => '😞', '2' => '😕', '3' => '🙂', '4' => '😊', '5' => '⭐'];
-    $rating_text = ['1' => 'Poor', '2' => 'Fair', '3' => 'Good', '4' => 'Very Good', '5' => 'Excellent'];
-    
-    $title = "{$rating_emoji[$rating]} User Rated Complaint";
-    $message = "User rated their resolution as {$rating_text[$rating]} ({$rating}/5 stars) for complaint #$complaint_id";
-    
-    if (!empty($feedback)) {
-        $feedback_preview = strlen($feedback) > 100 ? substr($feedback, 0, 100) . '...' : $feedback;
-        $message .= "\n\n💬 Feedback: $feedback_preview";
-    }
-    
-    createEnhancedNotification([
-        'user_id' => $complaint['assigned_to'],
-        'title' => $title,
-        'message' => $message,
-        'type' => $rating >= 4 ? 'success' : ($rating >= 3 ? 'info' : 'warning'),
-        'complaint_id' => $complaint_id,
-        'reference_type' => 'rating',
-        'action_url' => "complaint_details.php?id=$complaint_id",
-        'metadata' => [
-            'rating' => $rating,
-            'rating_text' => $rating_text[$rating],
-            'feedback' => $feedback
-        ]
-    ]);
-}
+        // Notify assigned admin about the rating with enhanced notification
+        if (!empty($complaint['assigned_to'])) {
+            $rating_emoji = ['1' => '😞', '2' => '😕', '3' => '🙂', '4' => '😊', '5' => '⭐'];
+            $rating_text = ['1' => 'Poor', '2' => 'Fair', '3' => 'Good', '4' => 'Very Good', '5' => 'Excellent'];
+
+            $title = "{$rating_emoji[$rating]} User Rated Complaint";
+            $message = "User rated their resolution as {$rating_text[$rating]} ({$rating}/5 stars) for complaint #$complaint_id";
+
+            if (!empty($feedback)) {
+                $feedback_preview = strlen($feedback) > 100 ? substr($feedback, 0, 100) . '...' : $feedback;
+                $message .= "\n\n💬 Feedback: $feedback_preview";
+            }
+
+            createEnhancedNotification([
+                'user_id' => $complaint['assigned_to'],
+                'title' => $title,
+                'message' => $message,
+                'type' => $rating >= 4 ? 'success' : ($rating >= 3 ? 'info' : 'warning'),
+                'complaint_id' => $complaint_id,
+                'reference_type' => 'rating',
+                'action_url' => "complaint_details.php?id=$complaint_id",
+                'metadata' => [
+                    'rating' => $rating,
+                    'rating_text' => $rating_text[$rating],
+                    'feedback' => $feedback
+                ]
+            ]);
+        }
         // Log to history
         $rating_text = ['1' => 'Poor', '2' => 'Fair', '3' => 'Good', '4' => 'Very Good', '5' => 'Excellent'];
         $stmt = $conn->prepare("
@@ -2154,19 +2195,20 @@ if (!empty($complaint['assigned_to'])) {
         }
         $stmt->bind_param("iis", $complaint_id, $user_id, $comment);
         $stmt->execute();
-        
+
         return ['success' => true, 'message' => 'Thank you for your feedback!'];
     }
-    
+
     return ['success' => false, 'message' => 'Failed to save rating.'];
 }
 
 /**
  * Get average rating for an admin
  */
-function getAdminAverageRating($admin_id) {
+function getAdminAverageRating($admin_id)
+{
     global $conn;
-    
+
     $stmt = $conn->prepare("
         SELECT 
             AVG(user_rating) as avg_rating,
@@ -2182,16 +2224,17 @@ function getAdminAverageRating($admin_id) {
     ");
     $stmt->bind_param("i", $admin_id);
     $stmt->execute();
-    
+
     return $stmt->get_result()->fetch_assoc();
 }
 
 /**
  * Get overall system rating statistics
  */
-function getSystemRatingStats() {
+function getSystemRatingStats()
+{
     global $conn;
-    
+
     $stmt = $conn->query("
         SELECT 
             AVG(user_rating) as avg_rating,
@@ -2204,54 +2247,56 @@ function getSystemRatingStats() {
         FROM complaints 
         WHERE user_rating IS NOT NULL
     ");
-    
+
     return $stmt->fetch_assoc();
 }
 
 /**
  * Create Enhanced Notification with Context
  */
-function createEnhancedNotification($params) {
+function createEnhancedNotification($params)
+{
     global $conn;
-    
+
     // Required params
     $user_id = $params['user_id'];
     $title = $params['title'];
     $message = $params['message'];
     $type = $params['type'] ?? 'info';
-    
+
     // Optional params
     $complaint_id = $params['complaint_id'] ?? null;
     $reference_type = $params['reference_type'] ?? null;
     $action_url = $params['action_url'] ?? null;
     $metadata = isset($params['metadata']) ? json_encode($params['metadata']) : null;
-    
+
     $stmt = $conn->prepare("
         INSERT INTO notifications 
         (user_id, complaint_id, title, message, type, action_url, reference_type, metadata) 
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ");
     $stmt->bind_param(
-        "iissssss", 
-        $user_id, 
-        $complaint_id, 
-        $title, 
-        $message, 
+        "iissssss",
+        $user_id,
+        $complaint_id,
+        $title,
+        $message,
         $type,
         $action_url,
         $reference_type,
         $metadata
     );
-    
+
     return $stmt->execute();
 }
 
 /**
  * Helper: Create notification for assignment
  */
-function notifyAssignment($user_id, $complaint_id, $admin_name, $is_reassignment = false, $old_admin_name = null, $reason = null) {
+function notifyAssignment($user_id, $complaint_id, $admin_name, $is_reassignment = false, $old_admin_name = null, $reason = null)
+{
     $is_user = !isAdminUserId($user_id);
-    
+
     if ($is_reassignment) {
         // Reassignment notification
         if ($is_user) {
@@ -2259,7 +2304,7 @@ function notifyAssignment($user_id, $complaint_id, $admin_name, $is_reassignment
             $message = "Your complaint has been reassigned to a different admin for better assistance.";
         } else {
             $title = "🔄 Complaint Reassigned to You";
-            $message = "Complaint #$complaint_id has been reassigned to you" . 
+            $message = "Complaint #$complaint_id has been reassigned to you" .
                       ($old_admin_name ? " from $old_admin_name" : "") . ".";
             if ($reason) {
                 $message .= "\n\n📝 Reason: $reason";
@@ -2275,7 +2320,7 @@ function notifyAssignment($user_id, $complaint_id, $admin_name, $is_reassignment
             $message = "You have been assigned to handle complaint #$complaint_id.";
         }
     }
-    
+
     createEnhancedNotification([
         'user_id' => $user_id,
         'title' => $title,
@@ -2296,9 +2341,10 @@ function notifyAssignment($user_id, $complaint_id, $admin_name, $is_reassignment
 /**
  * Helper: Create notification for status change
  */
-function notifyStatusChange($user_id, $complaint_id, $old_status, $new_status, $admin_name, $admin_response = null) {
+function notifyStatusChange($user_id, $complaint_id, $old_status, $new_status, $admin_name, $admin_response = null)
+{
     $is_user = !isAdminUserId($user_id);
-    
+
     // Status change emoji
     $emoji_map = [
         'Pending' => '⏳',
@@ -2308,17 +2354,17 @@ function notifyStatusChange($user_id, $complaint_id, $old_status, $new_status, $
         'Resolved' => '✅',
         'Closed' => '🔒'
     ];
-    
+
     $emoji = $emoji_map[$new_status] ?? '📌';
-    
+
     if ($is_user) {
         $title = "$emoji Status Updated: $new_status";
         $message = "Your complaint status has been changed from '$old_status' to '$new_status'.";
-        
+
         if ($admin_response) {
             $message .= "\n\n💬 Admin Response: " . (strlen($admin_response) > 100 ? substr($admin_response, 0, 100) . '...' : $admin_response);
         }
-        
+
         if ($new_status === 'Resolved') {
             $message .= "\n\n👉 Please confirm if your issue is completely resolved.";
         }
@@ -2326,7 +2372,7 @@ function notifyStatusChange($user_id, $complaint_id, $old_status, $new_status, $
         $title = "$emoji Complaint Status Changed";
         $message = "Complaint #$complaint_id status changed: $old_status → $new_status";
     }
-    
+
     // Type based on status
     $type = 'info';
     if ($new_status === 'Resolved' || $new_status === 'Closed') {
@@ -2334,7 +2380,7 @@ function notifyStatusChange($user_id, $complaint_id, $old_status, $new_status, $
     } elseif ($new_status === 'On Hold') {
         $type = 'warning';
     }
-    
+
     createEnhancedNotification([
         'user_id' => $user_id,
         'title' => $title,
@@ -2355,9 +2401,10 @@ function notifyStatusChange($user_id, $complaint_id, $old_status, $new_status, $
 /**
  * Helper: Create notification for comment
  */
-function notifyComment($user_id, $complaint_id, $commenter_name, $comment_text, $is_admin_comment) {
+function notifyComment($user_id, $complaint_id, $commenter_name, $comment_text, $is_admin_comment)
+{
     $is_user = !isAdminUserId($user_id);
-    
+
     if ($is_admin_comment && $is_user) {
         // Admin commented on user's complaint
         $title = "💬 Admin Replied";
@@ -2370,10 +2417,10 @@ function notifyComment($user_id, $complaint_id, $commenter_name, $comment_text, 
         $title = "💬 New Comment";
         $message = "$commenter_name commented on complaint #$complaint_id";
     }
-    
+
     $preview = strlen($comment_text) > 80 ? substr($comment_text, 0, 80) . '...' : $comment_text;
     $message .= "\n\n\"$preview\"";
-    
+
     createEnhancedNotification([
         'user_id' => $user_id,
         'title' => $title,
@@ -2393,16 +2440,17 @@ function notifyComment($user_id, $complaint_id, $commenter_name, $comment_text, 
 /**
  * Helper: Create notification for resolution confirmation
  */
-function notifyResolutionConfirmed($admin_id, $complaint_id, $user_name, $rating = null) {
+function notifyResolutionConfirmed($admin_id, $complaint_id, $user_name, $rating = null)
+{
     $title = "⭐ User Confirmed Resolution";
     $message = "$user_name confirmed that complaint #$complaint_id is resolved.";
-    
+
     if ($rating) {
         $stars = str_repeat('⭐', $rating);
         $rating_text = ['1' => 'Poor', '2' => 'Fair', '3' => 'Good', '4' => 'Very Good', '5' => 'Excellent'][$rating];
         $message .= "\n\n$stars Rating: $rating_text ($rating/5)";
     }
-    
+
     createEnhancedNotification([
         'user_id' => $admin_id,
         'title' => $title,
@@ -2421,13 +2469,14 @@ function notifyResolutionConfirmed($admin_id, $complaint_id, $user_name, $rating
 /**
  * Helper: Create notification for reopen request
  */
-function notifyReopenRequest($admin_id, $complaint_id, $user_name, $reason) {
+function notifyReopenRequest($admin_id, $complaint_id, $user_name, $reason)
+{
     $title = "🔄 Reopen Request";
     $message = "$user_name has requested to reopen complaint #$complaint_id.";
-    
+
     $reason_preview = strlen($reason) > 100 ? substr($reason, 0, 100) . '...' : $reason;
     $message .= "\n\n📝 Reason: $reason_preview";
-    
+
     createEnhancedNotification([
         'user_id' => $admin_id,
         'title' => $title,
@@ -2446,7 +2495,8 @@ function notifyReopenRequest($admin_id, $complaint_id, $user_name, $reason) {
 /**
  * Helper: Check if user ID is an admin
  */
-function isAdminUserId($user_id) {
+function isAdminUserId($user_id)
+{
     global $conn;
     $stmt = $conn->prepare("SELECT role FROM users WHERE user_id = ?");
     $stmt->bind_param("i", $user_id);
@@ -2462,28 +2512,29 @@ function isAdminUserId($user_id) {
 /**
  * Approve a complaint (Super Admin only)
  */
-function approveComplaint($complaint_id, $admin_id) {
+function approveComplaint($complaint_id, $admin_id)
+{
     global $conn;
-    
+
     // Verify Super Admin
     if (!isSuperAdmin()) {
         return ['success' => false, 'message' => 'Only Super Admin can approve complaints.'];
     }
-    
+
     // Get complaint details
     $stmt = $conn->prepare("SELECT user_id, subject, approval_status FROM complaints WHERE complaint_id = ?");
     $stmt->bind_param("i", $complaint_id);
     $stmt->execute();
     $complaint = $stmt->get_result()->fetch_assoc();
-    
+
     if (!$complaint) {
         return ['success' => false, 'message' => 'Complaint not found.'];
     }
-    
+
     if ($complaint['approval_status'] === 'approved') {
         return ['success' => false, 'message' => 'This complaint is already approved.'];
     }
-    
+
     // Update complaint status
     $stmt = $conn->prepare("
         UPDATE complaints 
@@ -2495,7 +2546,7 @@ function approveComplaint($complaint_id, $admin_id) {
         WHERE complaint_id = ?
     ");
     $stmt->bind_param("ii", $admin_id, $complaint_id);
-    
+
     if ($stmt->execute()) {
         // Log approval in history
         $stmt = $conn->prepare("
@@ -2505,7 +2556,7 @@ function approveComplaint($complaint_id, $admin_id) {
         ");
         $stmt->bind_param("ii", $complaint_id, $admin_id);
         $stmt->execute();
-        
+
         // Log to complaint history
         $stmt = $conn->prepare("
             INSERT INTO complaint_history 
@@ -2514,7 +2565,7 @@ function approveComplaint($complaint_id, $admin_id) {
         ");
         $stmt->bind_param("ii", $complaint_id, $admin_id);
         $stmt->execute();
-        
+
         // Notify user
         createEnhancedNotification([
             'user_id' => $complaint['user_id'],
@@ -2526,37 +2577,38 @@ function approveComplaint($complaint_id, $admin_id) {
             'action_url' => "complaint_details.php?id=$complaint_id",
             'metadata' => ['action' => 'approved']
         ]);
-        
+
         return ['success' => true, 'message' => 'Complaint approved successfully.'];
     }
-    
+
     return ['success' => false, 'message' => 'Failed to approve complaint.'];
 }
 
 /**
  * Reject a complaint with reason
  */
-function rejectComplaint($complaint_id, $admin_id, $reason) {
+function rejectComplaint($complaint_id, $admin_id, $reason)
+{
     global $conn;
-    
+
     if (!isSuperAdmin()) {
         return ['success' => false, 'message' => 'Only Super Admin can reject complaints.'];
     }
-    
+
     if (empty($reason)) {
         return ['success' => false, 'message' => 'Please provide a reason for rejection.'];
     }
-    
+
     // Get complaint details
     $stmt = $conn->prepare("SELECT user_id, subject FROM complaints WHERE complaint_id = ?");
     $stmt->bind_param("i", $complaint_id);
     $stmt->execute();
     $complaint = $stmt->get_result()->fetch_assoc();
-    
+
     if (!$complaint) {
         return ['success' => false, 'message' => 'Complaint not found.'];
     }
-    
+
     // Update complaint
     $stmt = $conn->prepare("
         UPDATE complaints 
@@ -2568,7 +2620,7 @@ function rejectComplaint($complaint_id, $admin_id, $reason) {
         WHERE complaint_id = ?
     ");
     $stmt->bind_param("isi", $admin_id, $reason, $complaint_id);
-    
+
     if ($stmt->execute()) {
         // Log rejection
         $stmt = $conn->prepare("
@@ -2578,7 +2630,7 @@ function rejectComplaint($complaint_id, $admin_id, $reason) {
         ");
         $stmt->bind_param("iis", $complaint_id, $admin_id, $reason);
         $stmt->execute();
-        
+
         // Log to history
         $stmt = $conn->prepare("
             INSERT INTO complaint_history 
@@ -2588,7 +2640,7 @@ function rejectComplaint($complaint_id, $admin_id, $reason) {
         $comment = "Complaint rejected by Super Admin. Reason: $reason";
         $stmt->bind_param("iis", $complaint_id, $admin_id, $comment);
         $stmt->execute();
-        
+
         // Notify user
         createEnhancedNotification([
             'user_id' => $complaint['user_id'],
@@ -2600,37 +2652,38 @@ function rejectComplaint($complaint_id, $admin_id, $reason) {
             'action_url' => "complaint_details.php?id=$complaint_id",
             'metadata' => ['action' => 'rejected', 'reason' => $reason]
         ]);
-        
+
         return ['success' => true, 'message' => 'Complaint rejected.'];
     }
-    
+
     return ['success' => false, 'message' => 'Failed to reject complaint.'];
 }
 
 /**
  * Request changes to a complaint
  */
-function requestComplaintChanges($complaint_id, $admin_id, $changes_needed) {
+function requestComplaintChanges($complaint_id, $admin_id, $changes_needed)
+{
     global $conn;
-    
+
     if (!isSuperAdmin()) {
         return ['success' => false, 'message' => 'Only Super Admin can request changes.'];
     }
-    
+
     if (empty($changes_needed)) {
         return ['success' => false, 'message' => 'Please specify what changes are needed.'];
     }
-    
+
     // Get complaint details
     $stmt = $conn->prepare("SELECT user_id, subject FROM complaints WHERE complaint_id = ?");
     $stmt->bind_param("i", $complaint_id);
     $stmt->execute();
     $complaint = $stmt->get_result()->fetch_assoc();
-    
+
     if (!$complaint) {
         return ['success' => false, 'message' => 'Complaint not found.'];
     }
-    
+
     // Update complaint
     $stmt = $conn->prepare("
         UPDATE complaints 
@@ -2641,7 +2694,7 @@ function requestComplaintChanges($complaint_id, $admin_id, $changes_needed) {
         WHERE complaint_id = ?
     ");
     $stmt->bind_param("isi", $admin_id, $changes_needed, $complaint_id);
-    
+
     if ($stmt->execute()) {
         // Log action
         $stmt = $conn->prepare("
@@ -2651,7 +2704,7 @@ function requestComplaintChanges($complaint_id, $admin_id, $changes_needed) {
         ");
         $stmt->bind_param("iis", $complaint_id, $admin_id, $changes_needed);
         $stmt->execute();
-        
+
         // Log to history
         $stmt = $conn->prepare("
             INSERT INTO complaint_history 
@@ -2661,7 +2714,7 @@ function requestComplaintChanges($complaint_id, $admin_id, $changes_needed) {
         $comment = "Changes requested by Super Admin: $changes_needed";
         $stmt->bind_param("iis", $complaint_id, $admin_id, $comment);
         $stmt->execute();
-        
+
         // Notify user
         createEnhancedNotification([
             'user_id' => $complaint['user_id'],
@@ -2673,19 +2726,20 @@ function requestComplaintChanges($complaint_id, $admin_id, $changes_needed) {
             'action_url' => "complaint_details.php?id=$complaint_id",
             'metadata' => ['action' => 'changes_requested', 'changes' => $changes_needed]
         ]);
-        
+
         return ['success' => true, 'message' => 'Changes requested successfully.'];
     }
-    
+
     return ['success' => false, 'message' => 'Failed to request changes.'];
 }
 
 /**
  * Resubmit complaint after changes
  */
-function resubmitComplaint($complaint_id, $user_id) {
+function resubmitComplaint($complaint_id, $user_id)
+{
     global $conn;
-    
+
     // Get complaint details
     $stmt = $conn->prepare("
         SELECT approval_status, resubmission_count 
@@ -2695,15 +2749,15 @@ function resubmitComplaint($complaint_id, $user_id) {
     $stmt->bind_param("ii", $complaint_id, $user_id);
     $stmt->execute();
     $complaint = $stmt->get_result()->fetch_assoc();
-    
+
     if (!$complaint) {
         return ['success' => false, 'message' => 'Complaint not found.'];
     }
-    
+
     if ($complaint['approval_status'] !== 'changes_requested' && $complaint['approval_status'] !== 'rejected') {
         return ['success' => false, 'message' => 'This complaint cannot be resubmitted.'];
     }
-    
+
     // Update to pending review
     $stmt = $conn->prepare("
         UPDATE complaints 
@@ -2717,7 +2771,7 @@ function resubmitComplaint($complaint_id, $user_id) {
         WHERE complaint_id = ?
     ");
     $stmt->bind_param("i", $complaint_id);
-    
+
     if ($stmt->execute()) {
         // Log to history
         $stmt = $conn->prepare("
@@ -2729,7 +2783,7 @@ function resubmitComplaint($complaint_id, $user_id) {
         $comment = "Complaint resubmitted for review (Resubmission #$resubmission_num)";
         $stmt->bind_param("iis", $complaint_id, $user_id, $comment);
         $stmt->execute();
-        
+
         // Notify Super Admins
         $super_admins = $conn->query("SELECT user_id FROM users WHERE role = 'admin' AND admin_level = 'super_admin' AND status = 'active'");
         while ($admin = $super_admins->fetch_assoc()) {
@@ -2743,43 +2797,44 @@ function resubmitComplaint($complaint_id, $user_id) {
                 'action_url' => "review_complaints.php?id=$complaint_id"
             ]);
         }
-        
+
         return ['success' => true, 'message' => 'Complaint resubmitted for review.'];
     }
-    
+
     return ['success' => false, 'message' => 'Failed to resubmit complaint.'];
 }
 
 /**
  * Get approval statistics
  */
-function getApprovalStats($admin_id = null, $date_from = null, $date_to = null) {
+function getApprovalStats($admin_id = null, $date_from = null, $date_to = null)
+{
     global $conn;
-    
+
     $where = [];
     $params = [];
     $types = "";
-    
+
     if ($admin_id) {
         $where[] = "reviewed_by = ?";
         $params[] = $admin_id;
         $types .= "i";
     }
-    
+
     if ($date_from) {
         $where[] = "reviewed_at >= ?";
         $params[] = $date_from;
         $types .= "s";
     }
-    
+
     if ($date_to) {
         $where[] = "reviewed_at <= ?";
         $params[] = $date_to;
         $types .= "s";
     }
-    
+
     $where_clause = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
-    
+
     $query = "
         SELECT 
             action,
@@ -2788,26 +2843,26 @@ function getApprovalStats($admin_id = null, $date_from = null, $date_to = null) 
         $where_clause
         GROUP BY action
     ";
-    
+
     $stmt = $conn->prepare($query);
     if (!empty($params)) {
         $stmt->bind_param($types, ...$params);
     }
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     $stats = [
         'approved' => 0,
         'rejected' => 0,
         'changes_requested' => 0,
         'total' => 0
     ];
-    
+
     while ($row = $result->fetch_assoc()) {
         $stats[$row['action']] = (int)$row['count'];
         $stats['total'] += (int)$row['count'];
     }
-    
+
     return $stats;
 }
 
@@ -2815,25 +2870,36 @@ function getApprovalStats($admin_id = null, $date_from = null, $date_to = null) 
 // 2FA / TRUSTED DEVICE FUNCTIONS
 // ============================================
 
-function generateDeviceToken() {
+function generateDeviceToken()
+{
     return bin2hex(random_bytes(32));
 }
 
-function getBrowserInfo() {
+function getBrowserInfo()
+{
     $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
     // Simple browser detection
-    if (str_contains($ua, 'Chrome'))       return 'Chrome';
-    elseif (str_contains($ua, 'Firefox'))  return 'Firefox';
-    elseif (str_contains($ua, 'Safari'))   return 'Safari';
-    elseif (str_contains($ua, 'Edge'))     return 'Edge';
-    else                                   return 'Unknown';
+    if (str_contains($ua, 'Chrome')) {
+        return 'Chrome';
+    } elseif (str_contains($ua, 'Firefox')) {
+        return 'Firefox';
+    } elseif (str_contains($ua, 'Safari')) {
+        return 'Safari';
+    } elseif (str_contains($ua, 'Edge')) {
+        return 'Edge';
+    } else {
+        return 'Unknown';
+    }
 }
 
-function isTrustedDevice($user_id) {
+function isTrustedDevice($user_id)
+{
     global $conn;
 
     $device_token = $_COOKIE['trusted_device'] ?? '';
-    if (empty($device_token)) return false;
+    if (empty($device_token)) {
+        return false;
+    }
 
     $stmt = $conn->prepare("
         SELECT id FROM trusted_devices 
@@ -2845,7 +2911,8 @@ function isTrustedDevice($user_id) {
     return $stmt->get_result()->num_rows > 0;
 }
 
-function saveTrustedDevice($user_id) {
+function saveTrustedDevice($user_id)
+{
     global $conn;
 
     $token      = generateDeviceToken();
@@ -2874,14 +2941,16 @@ function saveTrustedDevice($user_id) {
     return false;
 }
 
-function cleanExpiredDevices($user_id) {
+function cleanExpiredDevices($user_id)
+{
     global $conn;
     $stmt = $conn->prepare("DELETE FROM trusted_devices WHERE user_id = ? AND expires_at < NOW()");
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
 }
 
-function send2FAEmail($email, $full_name, $otp) {
+function send2FAEmail($email, $full_name, $otp)
+{
     $subject = "Login Verification Code - " . SITE_NAME;
     $message = "
     <!DOCTYPE html>
@@ -2927,7 +2996,8 @@ function send2FAEmail($email, $full_name, $otp) {
     return sendEmail($email, $subject, $message);
 }
 
-function generate2FACode($user_id) {
+function generate2FACode($user_id)
+{
     global $conn;
 
     $otp        = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
@@ -2945,11 +3015,14 @@ function generate2FACode($user_id) {
     ");
     $stmt->bind_param("iss", $user_id, $otp, $expires_at);
 
-    if ($stmt->execute()) return $otp;
+    if ($stmt->execute()) {
+        return $otp;
+    }
     return false;
 }
 
-function verify2FACode($user_id, $otp) {
+function verify2FACode($user_id, $otp)
+{
     global $conn;
 
     $stmt = $conn->prepare("

@@ -10,6 +10,7 @@ require_once '../includes/security_helper.php';
 require_once '../includes/recaptcha_helper.php';
 
 if (isLoggedIn()) {
+    logActivity('login_success', 'Logged in via trusted device');
     header("Location: index.php");
     exit();
 }
@@ -69,6 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     // Check if trusted device
                     if (isTrustedDevice($user_id)) {
+                        logActivity('login_success', 'Logged in via trusted device');
                         header("Location: index.php");
                         exit();
                     }
@@ -100,6 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $_SESSION['2fa_email']      = $temp['email'];
                                 $_SESSION['2fa_role']       = $temp['role'];
                                 $_SESSION['2fa_started_at'] = time();
+                                logActivity('login_2fa_sent', '2FA code sent — awaiting verification', $temp['user_id']);
                                 header("Location: verify_2fa.php");
                                 exit();
                             }
@@ -109,6 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     session_destroy();
                     $error = 'Unable to send verification code. Please try again later.';
                 } else {
+                    logActivity('login_failed', 'Failed login attempt for: ' . $email, null);
                     $error = $result['message'];
                 }
             }
