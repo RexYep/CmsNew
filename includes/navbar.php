@@ -133,6 +133,14 @@ if (!empty($current_user['avatar_url'])) {
     </a>
 </li>
 <?php endif; ?>
+<?php if (isSuperAdmin()): ?>
+<li>
+    <a href="<?php echo SITE_URL; ?>admin/backup.php"
+       class="<?php echo $current_page == 'backup.php' ? 'active' : ''; ?>">
+        <i class="bi bi-database-down"></i> Backup
+    </a>
+</li>
+<?php endif; ?>
                 <a href="<?php echo SITE_URL; ?>admin/profile.php" 
                    class="<?php echo $current_page == 'profile.php' && $current_dir == 'admin' ? 'active' : ''; ?>">
                     <i class="bi bi-person"></i> My Profile
@@ -245,7 +253,7 @@ if (!empty($current_user['avatar_url'])) {
                 <i class="bi bi-moon-stars-fill" id="darkModeIcon"></i>
             </button>
             
-            <!-- Notification Bell - always visible -->
+           
             <?php
                         $unread_count = getUnreadNotificationCount($_SESSION['user_id']);
 $recent_notifications = getRecentNotifications($_SESSION['user_id'], 5);
@@ -324,9 +332,9 @@ $recent_notifications = getRecentNotifications($_SESSION['user_id'], 5);
                 </ul>
             </div>
             
-            <!-- User Profile - avatar visible on all screens, name/email hidden on mobile -->
+        
             <?php
-            // Note: $current_user is already defined at the top of navbar.php
+            
 ?>
 
             <div class="dropdown user-profile-dropdown">
