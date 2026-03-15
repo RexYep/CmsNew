@@ -4,7 +4,7 @@
 // config/database.php
 
 
-$host     = getenv('DATABASE_HOST') ?: 'l';
+$host = getenv('DATABASE_HOST') ?: 'localhost';
 $username = getenv('DATABASE_USER') ?: '';
 $password = getenv('DATABASE_PASSWORD') ?: '';
 $dbname   = getenv('DATABASE_NAME') ?: '';

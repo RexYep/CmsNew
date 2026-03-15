@@ -4,7 +4,7 @@
 
 if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.cookie_httponly', 1);
-    ini_set('session.cookie_secure', 1);
+    ini_set('session.cookie_secure', getenv('APP_ENV') === 'production' ? 1 : 0);
     ini_set('session.cookie_samesite', 'Lax');
     ini_set('session.use_strict_mode', 1);
     session_start();
@@ -160,12 +160,14 @@ function daysElapsed($date)
 function getStatusBadge($status)
 {
     $badges = [
-        'Pending'     => 'badge bg-warning text-dark',
+     
+       'Pending'     => 'badge bg-warning text-dark',
         'Assigned'    => 'badge bg-info',
         'In Progress' => 'badge bg-primary',
         'On Hold'     => 'badge bg-secondary',
         'Resolved'    => 'badge bg-success',
-        'Closed'      => 'badge bg-dark'
+        'Closed'      => 'badge bg-dark',
+        'Rejected' => 'badge bg-danger'
     ];
     return $badges[$status] ?? 'badge bg-secondary';
 }

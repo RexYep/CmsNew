@@ -40,9 +40,9 @@ if (isset($_GET['action']) && isset($_GET['user_id'])) {
             $error = "Failed to approve user.";
         }
     } elseif ($action === 'reject') {
-    // Delete user completely instead of updating status
-    $stmt = $conn->prepare("DELETE FROM users WHERE user_id = ?");
-    $stmt->bind_param("i", $user_id);
+    // Rejecting user
+   $stmt = $conn->prepare("UPDATE users SET approval_status = 'rejected' WHERE user_id = ?");
+   $stmt->bind_param("i", $user_id);
     
     if ($stmt->execute()) {
         // Send rejection email
@@ -70,7 +70,7 @@ $pending_users = $conn->query("
 // Get counts
 $pending_count = $conn->query("SELECT COUNT(*) as count FROM users WHERE approval_status = 'pending' AND role = 'user'")->fetch_assoc()['count'];
 $approved_count = $conn->query("SELECT COUNT(*) as count FROM users WHERE approval_status = 'approved' AND role = 'user'")->fetch_assoc()['count'];
-$rejected_count = 0;
+$rejected_count = $conn->query("SELECT COUNT(*) as count FROM users WHERE approval_status = 'rejected' AND role = 'user'")->fetch_assoc()['count'];
 
 include '../includes/header.php';
 include '../includes/navbar.php';

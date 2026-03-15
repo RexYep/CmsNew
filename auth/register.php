@@ -535,14 +535,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                        value="<?php echo isset($email) ? htmlspecialchars($email) : ''; ?>">
             </div>
 
-            <!-- Phone -->
-            <label class="form-label">Phone Number <span style="color:var(--muted); font-weight:400;">(optional)</span></label>
-            <div class="input-wrap">
-                <i class="bi bi-telephone input-icon"></i>
-                <input type="tel" class="form-control" name="phone"
-                       placeholder="09123456789"
-                       value="<?php echo isset($phone) ? htmlspecialchars($phone) : ''; ?>">
-            </div>
+           <!-- Phone Number -->
+<label class="form-label">
+    Phone Number <span style="color:#f72585;">*</span>
+</label>
+<div class="input-wrap">
+    <i class="bi bi-telephone input-icon"></i>
+    <input 
+        type="tel" 
+        class="form-control" 
+        name="phone"
+        id="phone"
+        placeholder="09123456789"
+        value="<?php echo isset($phone) ? htmlspecialchars($phone) : ''; ?>"
+        inputmode="numeric" 
+        pattern="[0-9]{10,11}" 
+        maxlength="11"
+        required
+    >
+</div>
+
 
             <!-- Address -->
             <label class="form-label">Address <span style="color:#f72585;">*</span></label>
@@ -701,6 +713,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 reader.readAsDataURL(input.files[0]);
             }
         }
+
+        document.getElementById('phone').addEventListener('input', function() {
+    this.value = this.value.replace(/[^0-9]/g, '');
+});
     </script>
 </body>
 </html>

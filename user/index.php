@@ -212,17 +212,11 @@ include '../includes/navbar.php';
                     <div>
                         <h6 class="text-muted mb-2">Rejected</h6>
                         <h2 class="mb-0 text-danger"><?php echo $rejected_complaints; ?></h2>
-                        <small class="text-muted">View reasons</small>
                     </div>
                     <div class="text-danger" style="font-size: 3rem; opacity: 0.3;">
                         <i class="bi bi-x-circle"></i>
                     </div>
                 </div>
-            </div>
-            <div class="card-footer bg-danger text-white">
-                <a href="my_complaints.php?approval_status=rejected" class="text-white text-decoration-none">
-                    <i class="bi bi-eye"></i> View Details
-                </a>
             </div>
         </div>
     </div>

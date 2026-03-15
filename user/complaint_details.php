@@ -300,9 +300,12 @@ echo $approval_badges[$complaint['approval_status']] ?? '';
 ?>
             
             <!-- Status Badge -->
+           <!-- Status Badge — hide if rejected (approval badge already shows it) -->
+            <?php if ($complaint['approval_status'] !== 'rejected'): ?>
             <span class="<?php echo getStatusBadge($complaint['status']); ?>">
                 <?php echo $complaint['status']; ?>
             </span>
+            <?php endif; ?>
         </div>
     </div>
 </div>

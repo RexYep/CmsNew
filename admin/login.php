@@ -102,6 +102,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $_SESSION['2fa_email']      = $temp['email'];
                                 $_SESSION['2fa_role']       = $temp['role'];
                                 $_SESSION['2fa_started_at'] = time();
+                                
+                                if (isset($temp['admin_level'])) {
+                                $_SESSION['2fa_admin_level'] = $temp['admin_level'];
+                                }
                                 logActivity('login_2fa_sent', '2FA code sent — awaiting verification', $temp['user_id']);
                                 header("Location: verify_2fa.php");
                                 exit();

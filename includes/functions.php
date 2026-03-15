@@ -45,11 +45,12 @@ function logActivity($action, $description = '', $user_id = null)
     $ip         = getClientIP();
     $user_agent = substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 255);
 
+    $created_at = date('Y-m-d H:i:s'); // PHP Manila time
     $stmt = $conn->prepare("
-        INSERT INTO activity_logs (user_id, action, description, ip_address, user_agent)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO activity_logs (user_id, action, description, ip_address, user_agent, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
     ");
-    $stmt->bind_param("issss", $user_id, $action, $description, $ip, $user_agent);
+    $stmt->bind_param("isssss", $user_id, $action, $description, $ip, $user_agent, $created_at);
     $stmt->execute();
 }
 
@@ -97,17 +98,19 @@ function registerUser($full_name, $email, $phone, $password, $address = '', $pro
     if (!isStrongPassword($password)) {
         return ['success' => false, 'message' => 'Password must be at least 8 characters with uppercase, lowercase, and numbers'];
     }
+// Check if email already exists
+$stmt = $conn->prepare("SELECT user_id, approval_status FROM users WHERE email = ?");
+$stmt->bind_param("s", $email);
+$stmt->execute();
+$result = $stmt->get_result();
 
-    // Check if email already exists
-    $stmt = $conn->prepare("SELECT user_id FROM users WHERE email = ?");
-    $stmt->bind_param("s", $email);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result->num_rows > 0) {
-        return ['success' => false, 'message' => 'Email already registered'];
+if ($result->num_rows > 0) {
+    $existing = $result->fetch_assoc();
+    if ($existing['approval_status'] === 'rejected') {
+        return ['success' => false, 'message' => 'Your registration was rejected by the administrator. Please contact support for assistance.'];
     }
-
+    return ['success' => false, 'message' => 'Email already registered'];
+}
     // Hash password
     $hashed_password = hashPassword($password);
 
@@ -474,13 +477,14 @@ function getCommentCount($complaint_id)
 // Falls back to SMTP for local development
 function sendEmail($to, $subject, $message)
 {
-    $is_production = getenv('APP_ENV') === 'production';
-
-    if ($is_production) {
+    // Brevo API works everywhere (local + production)
+    // Uses HTTPS port 443 — never blocked unlike SMTP
+    if (getenv('BREVO_API_KEY')) {
         return sendEmailBrevoAPI($to, $subject, $message);
-    } else {
-        return sendEmailSMTP($to, $subject, $message);
     }
+
+    // Fallback to SMTP only if no Brevo key (optional)
+    return sendEmailSMTP($to, $subject, $message);
 }
 
 // Brevo HTTP API - for production (Render)
@@ -2568,7 +2572,7 @@ function approveComplaint($complaint_id, $admin_id)
         // Notify user
         createEnhancedNotification([
             'user_id' => $complaint['user_id'],
-            'title' => "✅ Complaint Approved",
+            'title' => "Complaint Approved",
             'message' => "Your complaint has been approved and is now being processed.\n\nSubject: " . $complaint['subject'],
             'type' => 'success',
             'complaint_id' => $complaint_id,
@@ -2608,17 +2612,22 @@ function rejectComplaint($complaint_id, $admin_id, $reason)
         return ['success' => false, 'message' => 'Complaint not found.'];
     }
 
-    // Update complaint
-    $stmt = $conn->prepare("
-        UPDATE complaints 
-        SET approval_status = 'rejected',
-            reviewed_by = ?,
-            reviewed_at = NOW(),
-            rejection_reason = ?,
-            status = 'Closed'
-        WHERE complaint_id = ?
-    ");
-    $stmt->bind_param("isi", $admin_id, $reason, $complaint_id);
+    // //Rejected Complaint
+    $archived_reason = "Rejected by Super Admin: " . $reason;
+$stmt = $conn->prepare("
+    UPDATE complaints 
+    SET approval_status = 'rejected',
+        reviewed_by = ?,
+        reviewed_at = NOW(),
+        rejection_reason = ?,
+        status = 'Rejected',
+        is_archived = 1,
+        archived_by = ?,
+        archived_at = NOW(),
+        archive_reason = ?
+    WHERE complaint_id = ?
+");
+$stmt->bind_param("isisi", $admin_id, $reason, $admin_id, $archived_reason, $complaint_id);
 
     if ($stmt->execute()) {
         // Log rejection
@@ -2643,8 +2652,8 @@ function rejectComplaint($complaint_id, $admin_id, $reason)
         // Notify user
         createEnhancedNotification([
             'user_id' => $complaint['user_id'],
-            'title' => "❌ Complaint Rejected",
-            'message' => "Your complaint was reviewed and rejected.\n\n📝 Reason: $reason\n\n💡 You can edit and resubmit if needed.",
+            'title' => "Complaint Rejected",
+            'message' => "Your complaint has been reviewed and rejected.\n\n📝 Reason: $reason\n\nThis complaint has been archived and can no longer be edited or resubmitted.",
             'type' => 'danger',
             'complaint_id' => $complaint_id,
             'reference_type' => 'rejection',
