@@ -150,6 +150,9 @@ notifyStatusChange(
 );
         
         $success = "Complaint updated successfully!";
+        // ↓ CACHE INVALIDATION: i-clear ang dashboard counts at complaint cache
+        cacheInvalidateComplaint($complaint_id, $complaint['user_id']);
+        cacheInvalidateNotifications($complaint['user_id']);
         
         // Refresh complaint data
         $stmt = $conn->prepare("

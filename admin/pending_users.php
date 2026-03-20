@@ -25,6 +25,8 @@ if (isset($_GET['action']) && isset($_GET['user_id'])) {
         $stmt->bind_param("i", $user_id);
         
       if ($stmt->execute()) {
+    // ↓ CACHE INVALIDATION: i-clear ang user counts sa dashboard
+    cacheInvalidateUser($user_id);
     // Send approval email
     $email_sent = sendApprovalEmail($user['email'], $user['full_name'], 'approved');
     
@@ -45,6 +47,8 @@ if (isset($_GET['action']) && isset($_GET['user_id'])) {
    $stmt->bind_param("i", $user_id);
     
     if ($stmt->execute()) {
+        // ↓ CACHE INVALIDATION: i-clear ang user counts sa dashboard
+        cacheInvalidateUser($user_id);
         // Send rejection email
         $email_sent = sendApprovalEmail($user['email'], $user['full_name'], 'rejected');
         

@@ -18,6 +18,8 @@ $success = '';
 if (isset($_GET['read'])) {
     $notification_id = (int)$_GET['read'];
     markNotificationAsRead($notification_id);
+    // ↓ CACHE INVALIDATION
+    cacheInvalidateNotifications($user_id);
     header("Location: notifications.php");
     exit();
 }
@@ -25,6 +27,8 @@ if (isset($_GET['read'])) {
 // Handle mark all as read
 if (isset($_GET['mark_all_read'])) {
     markAllNotificationsAsRead($user_id);
+    // ↓ CACHE INVALIDATION
+    cacheInvalidateNotifications($user_id);
     $success = 'All notifications marked as read';
 }
 

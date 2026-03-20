@@ -1,77 +1,40 @@
 <?php
 // ============================================
 // USER DASHBOARD
-// user/index.php
+// user/index.php — WITH REDIS CACHING
 // ============================================
 
 require_once '../config/config.php';
 require_once '../includes/functions.php';
 
-// Ensure user is logged in
 requireLogin();
 
-// Redirect admin to admin dashboard
 if (isAdmin()) {
     header("Location: ../admin/index.php");
     exit();
 }
 
 $page_title = "Dashboard";
+$user_id    = $_SESSION['user_id'];
 
-// Get user statistics
-$user_id = $_SESSION['user_id'];
+// ============================================
+// BEFORE: 7 separate DB queries
+// AFTER:  1 cached query via getUserDashboardStats()
+// ============================================
+$stats = getUserDashboardStats($user_id);
 
-// Total complaints
-$stmt = $conn->prepare("SELECT COUNT(*) as total FROM complaints WHERE user_id = ?");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$total_complaints = $stmt->get_result()->fetch_assoc()['total'];
+$total_complaints    = $stats['total'];
+$pending_review      = $stats['pending_review'];
+$approved_complaints = $stats['approved'];
+$changes_requested   = $stats['changes_requested'];
+$rejected_complaints = $stats['rejected_approval'];
+$pending_complaints  = $stats['pending'];
+$inprogress_complaints = $stats['in_progress'];
+$resolved_complaints = $stats['resolved'];
 
-// Pending Review (NEW)
-$stmt = $conn->prepare("SELECT COUNT(*) as total FROM complaints WHERE user_id = ? AND approval_status = 'pending_review'");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$pending_review = $stmt->get_result()->fetch_assoc()['total'];
-
-// Approved complaints (NEW)
-$stmt = $conn->prepare("SELECT COUNT(*) as total FROM complaints WHERE user_id = ? AND approval_status = 'approved'");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$approved_complaints = $stmt->get_result()->fetch_assoc()['total'];
-
-// Changes Requested (NEW)
-$stmt = $conn->prepare("SELECT COUNT(*) as total FROM complaints WHERE user_id = ? AND approval_status = 'changes_requested'");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$changes_requested = $stmt->get_result()->fetch_assoc()['total'];
-
-// Rejected (NEW)
-$stmt = $conn->prepare("SELECT COUNT(*) as total FROM complaints WHERE user_id = ? AND approval_status = 'rejected'");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$rejected_complaints = $stmt->get_result()->fetch_assoc()['total'];
-
-// Pending complaints
-$stmt = $conn->prepare("SELECT COUNT(*) as total FROM complaints WHERE user_id = ? AND status = 'Pending' AND approval_status = 'approved'");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$pending_complaints = $stmt->get_result()->fetch_assoc()['total'];
-
-// In Progress complaints
-$stmt = $conn->prepare("SELECT COUNT(*) as total FROM complaints WHERE user_id = ? AND status = 'In Progress'");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$inprogress_complaints = $stmt->get_result()->fetch_assoc()['total'];
-
-// Resolved complaints
-$stmt = $conn->prepare("SELECT COUNT(*) as total FROM complaints WHERE user_id = ? AND status = 'Resolved'");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$resolved_complaints = $stmt->get_result()->fetch_assoc()['total'];
-
-// Get recent complaints (include approval status)
+// Recent complaints — NOT cached (need fresh data here)
 $stmt = $conn->prepare("
-    SELECT c.*, cat.category_name 
+    SELECT c.*, cat.category_name
     FROM complaints c
     LEFT JOIN categories cat ON c.category_id = cat.category_id
     WHERE c.user_id = ?
@@ -81,6 +44,9 @@ $stmt = $conn->prepare("
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $recent_complaints = $stmt->get_result();
+
+// Daily limit check — NOT cached (bawat segundo nag-iiba ito)
+$limit_check = checkDailyComplaintLimit($user_id);
 
 // Include header, navbar
 include '../includes/header.php';
@@ -154,7 +120,7 @@ include '../includes/navbar.php';
     </div>
 </div>
 
-<!-- Approval Status Section (NEW) -->
+<!-- Approval Status Section -->
 <?php if ($pending_review > 0 || $changes_requested > 0 || $rejected_complaints > 0): ?>
 <div class="row mb-4">
     <div class="col-12">
@@ -188,22 +154,17 @@ include '../includes/navbar.php';
                     <div>
                         <h6 class="text-muted mb-2">Changes Requested</h6>
                         <h2 class="mb-0 text-info"><?php echo $changes_requested; ?></h2>
-                        <small class="text-muted">Action required</small>
+                        <small class="text-muted">Admin requested edits</small>
                     </div>
                     <div class="text-info" style="font-size: 3rem; opacity: 0.3;">
                         <i class="bi bi-pencil-square"></i>
                     </div>
                 </div>
             </div>
-            <div class="card-footer bg-info text-white">
-                <a href="my_complaints.php?approval_status=changes_requested" class="text-white text-decoration-none">
-                    <i class="bi bi-arrow-right-circle"></i> Edit & Resubmit
-                </a>
-            </div>
         </div>
     </div>
     <?php endif; ?>
-    
+
     <?php if ($rejected_complaints > 0): ?>
     <div class="col-md-4 col-sm-6 mb-3">
         <div class="card border-danger">
@@ -212,6 +173,7 @@ include '../includes/navbar.php';
                     <div>
                         <h6 class="text-muted mb-2">Rejected</h6>
                         <h2 class="mb-0 text-danger"><?php echo $rejected_complaints; ?></h2>
+                        <small class="text-muted">Not approved</small>
                     </div>
                     <div class="text-danger" style="font-size: 3rem; opacity: 0.3;">
                         <i class="bi bi-x-circle"></i>
@@ -229,10 +191,7 @@ include '../includes/navbar.php';
     <div class="col-12">
         <div class="card" style="border-left: 4px solid #667eea;">
             <div class="card-body">
-                <?php 
-                $limit_check = checkDailyComplaintLimit($user_id);
-                $percentage = ($limit_check['count'] / DAILY_COMPLAINT_LIMIT) * 100;
-                ?>
+                <?php $percentage = ($limit_check['count'] / DAILY_COMPLAINT_LIMIT) * 100; ?>
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <h6 class="mb-0">
                         <i class="bi bi-calendar-day"></i> Today's Submissions
@@ -241,18 +200,16 @@ include '../includes/navbar.php';
                         <?php echo $limit_check['count']; ?> / <?php echo DAILY_COMPLAINT_LIMIT; ?>
                     </span>
                 </div>
-                
                 <div class="progress" style="height: 25px;">
-                    <div class="progress-bar <?php echo $percentage >= 100 ? 'bg-danger' : ($percentage >= 80 ? 'bg-warning' : 'bg-success'); ?>" 
-                         role="progressbar" 
+                    <div class="progress-bar <?php echo $percentage >= 100 ? 'bg-danger' : ($percentage >= 80 ? 'bg-warning' : 'bg-success'); ?>"
+                         role="progressbar"
                          style="width: <?php echo $percentage; ?>%"
-                         aria-valuenow="<?php echo $limit_check['count']; ?>" 
-                         aria-valuemin="0" 
+                         aria-valuenow="<?php echo $limit_check['count']; ?>"
+                         aria-valuemin="0"
                          aria-valuemax="<?php echo DAILY_COMPLAINT_LIMIT; ?>">
                         <?php echo $percentage; ?>%
                     </div>
                 </div>
-                
                 <?php if ($limit_check['can_submit']): ?>
                     <small class="text-success mt-2 d-block">
                         <i class="bi bi-check-circle"></i> You can submit <?php echo $limit_check['remaining']; ?> more complaint(s) today
@@ -274,19 +231,16 @@ include '../includes/navbar.php';
             <div class="card-body">
                 <h5 class="mb-3"><i class="bi bi-lightning-charge"></i> Quick Actions</h5>
                 <div class="d-flex gap-2 flex-wrap">
-                   <?php 
-    $limit_check = checkDailyComplaintLimit($user_id);
-    ?>
-    <?php if ($limit_check['can_submit']): ?>
-        <a href="submit_complaint.php" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> Submit New Complaint
-            <span class="badge bg-light text-dark ms-1"><?php echo $limit_check['remaining']; ?> left today</span>
-        </a>
-    <?php else: ?>
-        <button class="btn btn-secondary" disabled title="Daily limit reached">
-            <i class="bi bi-exclamation-circle"></i> Daily Limit Reached (<?php echo DAILY_COMPLAINT_LIMIT; ?>/day)
-        </button>
-    <?php endif; ?>
+                    <?php if ($limit_check['can_submit']): ?>
+                        <a href="submit_complaint.php" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Submit New Complaint
+                            <span class="badge bg-light text-dark ms-1"><?php echo $limit_check['remaining']; ?> left today</span>
+                        </a>
+                    <?php else: ?>
+                        <button class="btn btn-secondary" disabled title="Daily limit reached">
+                            <i class="bi bi-exclamation-circle"></i> Daily Limit Reached (<?php echo DAILY_COMPLAINT_LIMIT; ?>/day)
+                        </button>
+                    <?php endif; ?>
                     <a href="my_complaints.php" class="btn btn-outline-primary">
                         <i class="bi bi-list-ul"></i> View All Complaints
                     </a>
@@ -326,30 +280,23 @@ include '../includes/navbar.php';
                                 <?php while ($complaint = $recent_complaints->fetch_assoc()): ?>
                                 <tr>
                                     <td>#<?php echo $complaint['complaint_id']; ?></td>
-                                    <td>
-                                        <strong><?php echo htmlspecialchars($complaint['subject']); ?></strong>
-                                    </td>
+                                    <td><strong><?php echo htmlspecialchars($complaint['subject']); ?></strong></td>
                                     <td>
                                         <span class="badge bg-light text-dark">
                                             <?php echo htmlspecialchars($complaint['category_name'] ?? 'N/A'); ?>
                                         </span>
                                     </td>
                                     <td>
-    <?php
-    $approval_badges = [
-        'pending_review' => '<span class="badge bg-warning text-dark"><i class="bi bi-hourglass"></i> Pending Review</span>',
-        'approved' => '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Approved</span>',
-        'rejected' => '<span class="badge bg-danger"><i class="bi bi-x-circle"></i> Rejected</span>',
-        'changes_requested' => '<span class="badge bg-info"><i class="bi bi-pencil"></i> Changes Needed</span>'
-    ];
-    echo $approval_badges[$complaint['approval_status']] ?? '';
-    ?>
-</td>
-<td>
-    <span class="<?php echo getStatusBadge($complaint['status']); ?>">
-        <?php echo $complaint['status']; ?>
-    </span>
-</td>
+                                        <?php
+                                        $approval_badges = [
+                                            'pending_review'    => '<span class="badge bg-warning text-dark"><i class="bi bi-hourglass"></i> Pending Review</span>',
+                                            'approved'          => '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Approved</span>',
+                                            'rejected'          => '<span class="badge bg-danger"><i class="bi bi-x-circle"></i> Rejected</span>',
+                                            'changes_requested' => '<span class="badge bg-info"><i class="bi bi-pencil"></i> Changes Needed</span>',
+                                        ];
+                                        echo $approval_badges[$complaint['approval_status']] ?? '';
+                                        ?>
+                                    </td>
                                     <td>
                                         <span class="<?php echo getStatusBadge($complaint['status']); ?>">
                                             <?php echo $complaint['status']; ?>
@@ -362,7 +309,7 @@ include '../includes/navbar.php';
                                     </td>
                                     <td><?php echo formatDate($complaint['submitted_date']); ?></td>
                                     <td>
-                                        <a href="complaint_details.php?id=<?php echo $complaint['complaint_id']; ?>" 
+                                        <a href="complaint_details.php?id=<?php echo $complaint['complaint_id']; ?>"
                                            class="btn btn-sm btn-outline-primary">
                                             <i class="bi bi-eye"></i> View
                                         </a>
@@ -392,6 +339,6 @@ include '../includes/navbar.php';
     </div>
 </div>
 
-</div> <!-- End Main Content -->
+</div><!-- End Main Content -->
 
 <?php include '../includes/footer.php'; ?>

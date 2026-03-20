@@ -167,6 +167,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             createNotification($admin['user_id'], $notif_title, $notif_message, $notif_type, $complaint_id);
                         }
 
+                        // ↓ CACHE INVALIDATION: i-clear ang dashboard at complaint stats
+                        cacheInvalidateComplaint(0, $user_id);
+
                         if ($upload_success) {
                             $success = 'Complaint submitted successfully! Tracking ID: #' . $complaint_id;
                             if (!empty($uploaded_files)) {

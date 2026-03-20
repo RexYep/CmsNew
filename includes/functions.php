@@ -345,17 +345,24 @@ function changePassword($user_id, $current_password, $new_password)
 function getAllCategories()
 {
     global $conn;
-
-    $result = $conn->query("SELECT * FROM categories WHERE status = 'active' ORDER BY category_name ASC");
-    $categories = [];
-
-    while ($row = $result->fetch_assoc()) {
-        $categories[] = $row;
+ 
+    // Try cache first
+    if (defined('CACHE_ENABLED') && CACHE_ENABLED && class_exists('Cache')) {
+        $cached = Cache::get("categories:all");
+        if ($cached !== null) return $cached;
     }
-
+ 
+    // Cache MISS — DB query
+    $result     = $conn->query("SELECT * FROM categories WHERE status = 'active' ORDER BY category_name ASC");
+    $categories = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+ 
+    // Save to cache
+    if (defined('CACHE_ENABLED') && CACHE_ENABLED && class_exists('Cache')) {
+        Cache::set("categories:all", $categories, CACHE_TTL_CATEGORIES);
+    }
+ 
     return $categories;
 }
-
 // Function to show alert message
 function showAlert($message, $type = 'info')
 {
@@ -380,24 +387,53 @@ function createNotification($user_id, $title, $message, $type = 'info', $complai
 function getUnreadNotificationCount($user_id)
 {
     global $conn;
-
+ 
+    // Try cache first
+    if (defined('CACHE_ENABLED') && CACHE_ENABLED && class_exists('Cache')) {
+        $cached = Cache::get("notif:unread:{$user_id}");
+        if ($cached !== null) return (int) $cached;
+    }
+ 
+    // Cache MISS — DB query
     $stmt = $conn->prepare("SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0");
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
-
-    return $stmt->get_result()->fetch_assoc()['count'];
+    $count = (int) $stmt->get_result()->fetch_assoc()['count'];
+ 
+    // Save to cache
+    if (defined('CACHE_ENABLED') && CACHE_ENABLED && class_exists('Cache')) {
+        Cache::set("notif:unread:{$user_id}", $count, CACHE_TTL_NOTIF);
+    }
+ 
+    return $count;
 }
+ 
 
 // Function to get recent notifications
 function getRecentNotifications($user_id, $limit = 5)
 {
     global $conn;
-
+ 
+    $cache_key = "notif:recent:{$user_id}:{$limit}";
+ 
+    // Try cache first
+    if (defined('CACHE_ENABLED') && CACHE_ENABLED && class_exists('Cache')) {
+        $cached = Cache::get($cache_key);
+        if ($cached !== null) return $cached;
+    }
+ 
+    // Cache MISS — DB query
     $stmt = $conn->prepare("SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ?");
     $stmt->bind_param("ii", $user_id, $limit);
     $stmt->execute();
-
-    return $stmt->get_result();
+    $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+ 
+    // Save to cache
+    if (defined('CACHE_ENABLED') && CACHE_ENABLED && class_exists('Cache')) {
+        Cache::set($cache_key, $rows, CACHE_TTL_NOTIF);
+    }
+ 
+    return $rows;
 }
 
 // Function to mark notification as read
@@ -3115,3 +3151,135 @@ function getIPLocation($ip) {
 
     return implode(', ', $parts) ?: null;
 }
+
+function getUserDashboardStats(int $user_id): array
+{
+    global $conn;
+ 
+    $cache_key = "user:dashboard:{$user_id}";
+ 
+    if (defined('CACHE_ENABLED') && CACHE_ENABLED && class_exists('Cache')) {
+        $cached = Cache::get($cache_key);
+        if ($cached !== null) return $cached;
+    }
+ 
+    // One multi-row query instead of 7 separate queries
+    $stmt = $conn->prepare("
+        SELECT
+            COUNT(*)                                                        AS total,
+            SUM(approval_status = 'pending_review')                        AS pending_review,
+            SUM(approval_status = 'approved')                              AS approved,
+            SUM(approval_status = 'changes_requested')                     AS changes_requested,
+            SUM(approval_status = 'rejected')                              AS rejected_approval,
+            SUM(status = 'Pending'     AND approval_status = 'approved')   AS pending,
+            SUM(status = 'In Progress')                                    AS in_progress,
+            SUM(status = 'Resolved')                                       AS resolved
+        FROM complaints
+        WHERE user_id = ?
+    ");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $stats = $stmt->get_result()->fetch_assoc();
+ 
+    // Cast to int
+    $stats = array_map('intval', $stats);
+ 
+    if (defined('CACHE_ENABLED') && CACHE_ENABLED && class_exists('Cache')) {
+        Cache::set($cache_key, $stats, CACHE_TTL_DASHBOARD);
+    }
+ 
+    return $stats;
+}
+ 
+// ============================================
+// NEW: getAdminDashboardCounts
+// Gamitin sa admin/index.php para isahin ang
+// maraming COUNT queries into one cached call
+// ============================================
+function getAdminDashboardCounts(): array
+{
+    global $conn;
+ 
+    if (defined('CACHE_ENABLED') && CACHE_ENABLED && class_exists('Cache')) {
+        $cached = Cache::get("admin:dashboard");
+        if ($cached !== null) return $cached;
+    }
+ 
+    $counts = [];
+ 
+    // Complaints summary — isang query lang para sa lahat ng status
+    $row = $conn->query("
+        SELECT
+            COUNT(*)                                              AS total,
+            SUM(is_archived = 0)                                  AS active,
+            SUM(status = 'Pending'     AND is_archived = 0)       AS pending,
+            SUM(status = 'In Progress' AND is_archived = 0)       AS in_progress,
+            SUM(status = 'Resolved'    AND is_archived = 0)       AS resolved,
+            SUM(status = 'Closed'      AND is_archived = 0)       AS closed,
+            SUM(status = 'Rejected'    AND is_archived = 0)       AS rejected,
+            SUM(approval_status = 'pending_review')               AS pending_review,
+            SUM(DATE(submitted_date) = CURDATE())                 AS today
+        FROM complaints
+    ")->fetch_assoc();
+    $counts = array_map('intval', $row);
+ 
+    // Users summary
+    $row2 = $conn->query("
+        SELECT
+            COUNT(*)                                                    AS total_users,
+            SUM(approval_status = 'pending' AND role = 'user')          AS pending_users,
+            SUM(status = 'active'           AND role = 'user')          AS active_users
+        FROM users
+    ")->fetch_assoc();
+    $counts = array_merge($counts, array_map('intval', $row2));
+ 
+    if (defined('CACHE_ENABLED') && CACHE_ENABLED && class_exists('Cache')) {
+        Cache::set("admin:dashboard", $counts, CACHE_TTL_DASHBOARD);
+    }
+ 
+    return $counts;
+}
+ 
+// ============================================
+// CACHE INVALIDATION HELPERS
+// I-call ang mga ito pagkatapos ng DB updates
+// ============================================
+ 
+// Kapag nag-submit, na-update, o na-delete ng complaint
+function cacheInvalidateComplaint(int $complaint_id = 0, int $user_id = 0): void {
+    if (!defined('CACHE_ENABLED') || !CACHE_ENABLED || !class_exists('Cache')) return;
+ 
+    Cache::del("admin:dashboard");
+    Cache::delPattern("complaints:*");
+ 
+    if ($complaint_id) Cache::del("complaint:{$complaint_id}");
+    if ($user_id)      Cache::del("user:dashboard:{$user_id}");
+}
+ 
+// Kapag na-approve/reject/update ang user
+function cacheInvalidateUser(int $user_id = 0): void {
+    if (!defined('CACHE_ENABLED') || !CACHE_ENABLED || !class_exists('Cache')) return;
+ 
+    Cache::del("admin:dashboard");
+    Cache::delPattern("users:*");
+    if ($user_id) {
+        Cache::del("user:dashboard:{$user_id}");
+        Cache::del("notif:unread:{$user_id}");
+        Cache::del("notif:recent:{$user_id}:5");
+    }
+}
+ 
+// Kapag may bagong notif o na-mark as read
+function cacheInvalidateNotifications(int $user_id): void {
+    if (!defined('CACHE_ENABLED') || !CACHE_ENABLED || !class_exists('Cache')) return;
+ 
+    Cache::del("notif:unread:{$user_id}");
+    Cache::del("notif:recent:{$user_id}:5");
+}
+ 
+// Kapag na-update ang categories
+function cacheInvalidateCategories(): void {
+    if (!defined('CACHE_ENABLED') || !CACHE_ENABLED || !class_exists('Cache')) return;
+    Cache::del("categories:all");
+}
+ 

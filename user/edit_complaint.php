@@ -78,6 +78,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($error)) {
             
             if ($result['success']) {
                 $success = 'Your complaint has been updated and resubmitted for review.';
+                // ↓ CACHE INVALIDATION: i-clear ang complaint stats ng user
+                cacheInvalidateComplaint($complaint_id, $user_id);
                 
                 // Refresh complaint data
                 $stmt = $conn->prepare("SELECT * FROM complaints WHERE complaint_id = ?");
