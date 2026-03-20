@@ -7,6 +7,13 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
+if (file_exists(__DIR__ . '/../config/redis.php') && !defined('CACHE_ENABLED')) {
+    require_once __DIR__ . '/../config/redis.php';
+}
+if (defined('CACHE_ENABLED') && file_exists(__DIR__ . '/cache_helper.php')) {
+    require_once __DIR__ . '/cache_helper.php';
+}
+
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
