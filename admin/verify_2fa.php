@@ -16,7 +16,6 @@ if (!isset($_SESSION['2fa_user_id'])) {
 
 // Already fully logged in
 if (isLoggedIn()) {
-    logActivity('login_success', 'Logged in');
     header("Location: index.php");
     exit();
 }
@@ -79,7 +78,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verify_code'])) {
         if (isset($_POST['trust_device']) && $_POST['trust_device'] === '1') {
             saveTrustedDevice($user_id);
         }
-        logActivity('login_success', 'Logged in via 2FA verification');
+        $role = $_SESSION['role'] ?? 'user';
+        logActivity('login_success', 'Logged in via 2FA verification (' . $role . ')');
         header("Location: index.php");
         exit();
 

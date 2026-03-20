@@ -51,7 +51,7 @@ function logActivity($action, $description = '', $user_id = null) {
     ");
     $stmt->bind_param("issssss", $user_id, $action, $description, $ip, $location, $user_agent, $created_at);
     $stmt->execute();
-}
+    }
 
 // Function to hash password
 function hashPassword($password)
@@ -816,11 +816,14 @@ function recordSuccessfulLogin($email, $ip_address)
 function getClientIP()
 {
     if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-        // Take FIRST IP only — that's the real client IP
+        // Take FIRST IP only — real client IP (others are proxies)
         $ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
         return trim($ips[0]);
+    } elseif (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+        return trim($_SERVER['HTTP_CLIENT_IP']);
+    } else {
+        return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
     }
-    return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
 }
 // Function to generate OTP
 function generateOTP($length = 6)
