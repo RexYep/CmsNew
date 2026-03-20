@@ -11,6 +11,7 @@ ini_set('display_errors', 1);
 require_once 'config/config.php';
 require_once 'config/redis.php';
 require_once 'includes/cache_helper.php';
+require_once 'includes/functions.php';
 
 $test_password = 'test1234';
 if (!isset($_GET['key']) || $_GET['key'] !== $test_password) {
