@@ -334,12 +334,13 @@ if ($suspicious->num_rows > 0):
                                 <th>Action</th>
                                 <th>Description</th>
                                 <th>IP Address</th>
+                                <th>Location</th>
                                 <th>Browser</th>
                             </tr>
                         </thead>
                         <tbody id="logsTableBody">
                             <?php while ($log = $logs->fetch_assoc()): ?>
-                            <tr <?php echo $log['action'] === 'login_failed' ? 'class="table-danger bg-opacity-25"' : ''; ?>>
+                            <tr>
                                 <td>
                                     <small><?php echo formatDateTime($log['created_at']); ?></small>
                                 </td>
@@ -355,9 +356,19 @@ if ($suspicious->num_rows > 0):
                                 <td>
                                     <small><?php echo htmlspecialchars($log['description'] ?? '—'); ?></small>
                                 </td>
-                                <td>
-                                    <code class="small"><?php echo htmlspecialchars($log['ip_address'] ?? '—'); ?></code>
+                               <td>
+                                <code class="small"><?php echo htmlspecialchars($log['ip_address'] ?? '—'); ?></code>
                                 </td>
+                            <td>
+                                <?php if (!empty($log['location'])): ?>
+                                    <small>
+                                        <i class="bi bi-geo-alt text-muted me-1"></i>
+                                        <?php echo htmlspecialchars($log['location']); ?>
+                                    </small>
+                                <?php else: ?>
+                                    <small class="text-muted">—</small>
+                                <?php endif; ?>
+                            </td>
                                 <td>
                                     <small class="text-muted" title="<?php echo htmlspecialchars($log['user_agent'] ?? ''); ?>">
                                        <?php
@@ -491,6 +502,9 @@ if ($suspicious->num_rows > 0):
         const user = log.full_name
             ? `<strong>${escHtml(log.full_name)}</strong><br><small class="text-muted">${escHtml(log.email)}</small>`
             : `<span class="text-muted">—</span>`;
+       const location = log.location
+            ? `<small><i class="bi bi-geo-alt text-muted me-1"></i>${escHtml(log.location)}</small>`
+            : `<small class="text-muted">—</small>`;
         return `
         <tr class="${rowClass}">
             <td><small>${escHtml(log.created_at)}</small></td>
@@ -498,6 +512,7 @@ if ($suspicious->num_rows > 0):
             <td>${getBadge(log.action)}</td>
             <td><small>${escHtml(log.description)}</small></td>
             <td><code class="small">${escHtml(log.ip_address)}</code></td>
+            <td>${location}</td>
             <td><small class="text-muted" title="${escHtml(log.user_agent)}">${getBrowserIcon(log.browser)}</small></td>
         </tr>`;
     }

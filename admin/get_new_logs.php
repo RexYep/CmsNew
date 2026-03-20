@@ -44,16 +44,18 @@ while ($row = $result->fetch_assoc()) {
     else                                                             $browser = 'Unknown';
 
     $logs[] = [
-        'id'          => $row['id'],
-        'created_at'  => formatDateTime($row['created_at']),
-        'full_name'   => $row['full_name'] ?? '',
-        'email'       => $row['email'] ?? '',
-        'action'      => $row['action'],
-        'description' => $row['description'] ?? '',
-        'ip_address'  => $row['ip_address'] ?? '',
-        'browser'     => $browser,
-        'user_agent'  => $row['user_agent'] ?? '',
+    'id'          => $row['id'],
+    'created_at'  => formatDateTime($row['created_at']),
+    'full_name'   => $row['full_name'] ?? '',
+    'email'       => $row['email'] ?? '',
+    'action'      => $row['action'],
+    'description' => $row['description'] ?? '',
+    'ip_address'  => $row['ip_address'] ?? '',
+    'location'    => $row['location'] ?? '',
+    'browser'     => $browser,
+    'user_agent'  => $row['user_agent'] ?? '',
     ];
+
 }
 
 // Get latest stats for today

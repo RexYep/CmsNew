@@ -33,24 +33,23 @@ function isStrongPassword($password)
         preg_match('/[\W_]/', $password);
 }
 
-function logActivity($action, $description = '', $user_id = null)
-{
+function logActivity($action, $description = '', $user_id = null) {
     global $conn;
 
-    // Use logged-in user if no user_id provided
     if ($user_id === null) {
         $user_id = $_SESSION['user_id'] ?? null;
     }
 
     $ip         = getClientIP();
     $user_agent = substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 255);
+    $created_at = date('Y-m-d H:i:s');
+    $location   = getIPLocation($ip);
 
-    $created_at = date('Y-m-d H:i:s'); // PHP Manila time
     $stmt = $conn->prepare("
-        INSERT INTO activity_logs (user_id, action, description, ip_address, user_agent, created_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO activity_logs (user_id, action, description, ip_address, location, user_agent, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
     ");
-    $stmt->bind_param("isssss", $user_id, $action, $description, $ip, $user_agent, $created_at);
+    $stmt->bind_param("issssss", $user_id, $action, $description, $ip, $location, $user_agent, $created_at);
     $stmt->execute();
 }
 
@@ -3079,4 +3078,36 @@ function verify2FACode($user_id, $otp)
     $stmt->execute();
 
     return ['success' => true];
+}
+
+function getIPLocation($ip) {
+    // Skip private/local IPs
+    if (empty($ip) || $ip === '127.0.0.1' || str_starts_with($ip, '192.168.') || str_starts_with($ip, '10.')) {
+        return 'Local Network';
+    }
+
+    $url = "http://ip-api.com/json/{$ip}?fields=status,city,regionName,country";
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => 3,
+        CURLOPT_CONNECTTIMEOUT => 2,
+    ]);
+    $response = curl_exec($ch);
+    curl_close($ch);
+
+    if (!$response) return null;
+
+    $data = json_decode($response, true);
+
+    if (!$data || $data['status'] !== 'success') return null;
+
+    $parts = array_filter([
+        $data['city']       ?? '',
+        $data['regionName'] ?? '',
+        $data['country']    ?? '',
+    ]);
+
+    return implode(', ', $parts) ?: null;
 }
