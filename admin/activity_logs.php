@@ -161,12 +161,12 @@ include '../includes/navbar.php';
 <div class="row mb-4">
     <?php
     $stats = [
-        ['login_success',    'Successful Logins Today',  'bg-success', 'bi-check-circle'],
-        ['login_failed',     'Failed Logins Today',      'bg-danger',  'bi-x-circle'],
-        ['password_changed', 'Password Changes Today',   'bg-warning', 'bi-key'],
-        ['logout',           'Logouts Today',            'bg-secondary','bi-box-arrow-right'],
+        ['login_success',    'Successful Logins Today',  'bg-success',  'bi-check-circle',    'statLoginSuccess'],
+        ['login_failed',     'Failed Logins Today',      'bg-danger',   'bi-x-circle',        'statLoginFailed'],
+        ['password_changed', 'Password Changes Today',   'bg-warning',  'bi-key',             'statPasswordChanged'],
+        ['logout',           'Logouts Today',            'bg-secondary','bi-box-arrow-right',  'statLogout'],
     ];
-foreach ($stats as [$action, $label, $color, $icon]):
+foreach ($stats as [$action, $label, $color, $icon, $statId]):
     $count = $conn->query("
             SELECT COUNT(*) as c FROM activity_logs
             WHERE action = '$action' AND DATE(created_at) = CURDATE()
@@ -179,7 +179,7 @@ foreach ($stats as [$action, $label, $color, $icon]):
                     <i class="bi <?php echo $icon; ?> <?php echo $color; ?> fs-4" style="color: inherit;"></i>
                 </div>
                 <div>
-                    <div class="fw-bold fs-4"><?php echo $count; ?></div>
+                    <div class="fw-bold fs-4" id="<?php echo $statId; ?>"><?php echo $count; ?></div>
                     <small class="text-muted"><?php echo $label; ?></small>
                 </div>
             </div>
@@ -301,12 +301,26 @@ if ($suspicious->num_rows > 0):
 <div class="row">
     <div class="col-12">
         <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="card-header d-flex justify-content-between align-items-center"
+                 id="logsCard"
+                 data-last-id="<?php
+                    $max = $conn->query("SELECT MAX(id) as m FROM activity_logs")->fetch_assoc();
+                    echo (int)($max['m'] ?? 0);
+                 ?>">
                 <span>
                     <i class="bi bi-shield-check"></i> Activity Logs
-                    <span class="badge bg-secondary ms-1"><?php echo $total_records; ?></span>
+                    <span class="badge bg-secondary ms-1" id="totalCount"><?php echo $total_records; ?></span>
+                    <span class="badge bg-success ms-1" id="liveBadge">
+                        <i class="bi bi-circle-fill me-1" style="font-size:0.5rem;"></i>LIVE
+                    </span>
                 </span>
-                <small class="text-muted">Showing latest activities</small>
+                <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted" id="lastChecked">Checking...</small>
+                    <span class="badge bg-warning text-dark d-none" id="newBadge">
+                        <i class="bi bi-arrow-up-circle me-1"></i>
+                        <span id="newCount">0</span> new
+                    </span>
+                </div>
             </div>
             <div class="card-body p-0">
 
@@ -323,7 +337,7 @@ if ($suspicious->num_rows > 0):
                                 <th>Browser</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="logsTableBody">
                             <?php while ($log = $logs->fetch_assoc()): ?>
                             <tr <?php echo $log['action'] === 'login_failed' ? 'class="table-danger bg-opacity-25"' : ''; ?>>
                                 <td>
@@ -418,5 +432,138 @@ if ($suspicious->num_rows > 0):
 
 </div><!-- End page-content -->
 </div><!-- End main-content -->
+
+<style>
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+#liveBadge i { animation: pulse 1.5s infinite; }
+@keyframes highlightNew {
+    0%   { background-color: rgba(25,135,84,0.25); }
+    100% { background-color: transparent; }
+}
+.new-log-row { animation: highlightNew 3s ease forwards; }
+</style>
+
+<script>
+(function() {
+    const card    = document.getElementById('logsCard');
+    const tbody   = document.getElementById('logsTableBody');
+    const newBadge   = document.getElementById('newBadge');
+    const newCount   = document.getElementById('newCount');
+    const lastChecked = document.getElementById('lastChecked');
+
+    if (!card || !tbody) return;
+
+    let lastId       = parseInt(card.dataset.lastId) || 0;
+    let pendingCount = 0;
+    let isPage1      = <?php echo $page === 1 ? 'true' : 'false'; ?>;
+    let hasFilters   = <?php echo (!empty($action_filter) || !empty($search_query) || !empty($date_from) || !empty($date_to)) ? 'true' : 'false'; ?>;
+
+    // Action badge map
+    const badgeMap = {
+        'login_success':    ['bg-success',  'bi-check-circle',    'Login Success'],
+        'login_failed':     ['bg-danger',   'bi-x-circle',        'Login Failed'],
+        'login_2fa_sent':   ['bg-info',     'bi-shield-lock',     '2FA Sent'],
+        'logout':           ['bg-secondary','bi-box-arrow-right', 'Logout'],
+        'password_changed': ['bg-warning',  'bi-key',             'Password Changed'],
+        'backup_created':   ['bg-primary',  'bi-database-down',   'Backup Created'],
+    };
+
+    function getBadge(action) {
+        const b = badgeMap[action] || ['bg-secondary', 'bi-activity',
+            action.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase())];
+        return `<span class='badge ${b[0]}'><i class='bi ${b[1]} me-1'></i>${b[2]}</span>`;
+    }
+
+    function getBrowserIcon(browser) {
+        const map = {
+            'Edge':         'bi-browser-edge',
+            'Opera':        'bi-browser-chrome',
+            'Firefox':      'bi-browser-firefox',
+            'Safari':       'bi-browser-safari',
+            'Chrome/Brave': 'bi-browser-chrome',
+        };
+        return `<i class="bi ${map[browser] || 'bi-globe'}"></i> ${browser}`;
+    }
+
+    function buildRow(log) {
+        const isFailedLogin = log.action === 'login_failed';
+        const rowClass = isFailedLogin ? 'table-danger bg-opacity-25 new-log-row' : 'new-log-row';
+        const user = log.full_name
+            ? `<strong>${escHtml(log.full_name)}</strong><br><small class="text-muted">${escHtml(log.email)}</small>`
+            : `<span class="text-muted">—</span>`;
+        return `
+        <tr class="${rowClass}">
+            <td><small>${escHtml(log.created_at)}</small></td>
+            <td>${user}</td>
+            <td>${getBadge(log.action)}</td>
+            <td><small>${escHtml(log.description)}</small></td>
+            <td><code class="small">${escHtml(log.ip_address)}</code></td>
+            <td><small class="text-muted" title="${escHtml(log.user_agent)}">${getBrowserIcon(log.browser)}</small></td>
+        </tr>`;
+    }
+
+    function escHtml(str) {
+        return String(str || '')
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function updateStats(stats) {
+        const map = {
+            'login_success':    'statLoginSuccess',
+            'login_failed':     'statLoginFailed',
+            'password_changed': 'statPasswordChanged',
+            'logout':           'statLogout',
+        };
+        for (const [action, elId] of Object.entries(map)) {
+            const el = document.getElementById(elId);
+            if (el && stats[action] !== undefined) el.textContent = stats[action];
+        }
+    }
+
+    function checkNewLogs() {
+        fetch(`get_new_logs.php?last_id=${lastId}`)
+            .then(r => r.json())
+            .then(data => {
+                const now = new Date().toLocaleTimeString('en-PH', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+                lastChecked.textContent = `Last checked: ${now}`;
+
+                if (data.latest_id) lastId = data.latest_id;
+
+                // Update stats
+                if (data.stats) updateStats(data.stats);
+
+                if (!data.logs || data.logs.length === 0) return;
+
+                // Only auto-prepend if on page 1 with no filters
+                if (isPage1 && !hasFilters) {
+                    data.logs.forEach(log => {
+                        tbody.insertAdjacentHTML('afterbegin', buildRow(log));
+                    });
+                    // Remove excess rows (keep max 20)
+                    const rows = tbody.querySelectorAll('tr');
+                    if (rows.length > 20) {
+                        for (let i = 20; i < rows.length; i++) rows[i].remove();
+                    }
+                } else {
+                    // Show "new entries" badge
+                    pendingCount += data.logs.length;
+                    newCount.textContent = pendingCount;
+                    newBadge.classList.remove('d-none');
+                    newBadge.onclick = () => window.location.reload();
+                    newBadge.style.cursor = 'pointer';
+                    newBadge.title = 'Click to refresh';
+                }
+            })
+            .catch(() => {
+                lastChecked.textContent = 'Connection error...';
+            });
+    }
+
+    // Start polling every 10 seconds
+    checkNewLogs();
+    setInterval(checkNewLogs, 10000);
+})();
+</script>
 
 <?php include '../includes/footer.php'; ?>
