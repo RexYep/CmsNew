@@ -1,7 +1,193 @@
-// ============================================
-// COMPLAINT MANAGEMENT SYSTEM - COMPLETE JAVASCRIPT
 // assets/js/script.js
+
+const PageLoader = (function () {
+  const bar = document.getElementById("page-loading-bar");
+  let timer = null;
+  let currentWidth = 0;
+
+  function start() {
+    if (!bar) return;
+    currentWidth = 0;
+    bar.className = "loading";
+    bar.style.width = "0%";
+    bar.style.opacity = "1";
+    bar.style.transition = "width 0.25s ease";
+
+    // Mag-simulate ng progress hanggang 85%
+    timer = setInterval(function () {
+      if (currentWidth < 85) {
+        // Mas mabilis sa simula, mas dahan-dahan sa bandang huli
+        const increment =
+          currentWidth < 30
+            ? 8
+            : currentWidth < 60
+              ? 4
+              : currentWidth < 80
+                ? 1
+                : 0.3;
+        currentWidth = Math.min(currentWidth + increment, 85);
+        bar.style.width = currentWidth + "%";
+      }
+    }, 150);
+  }
+
+  function done() {
+    if (!bar) return;
+    clearInterval(timer);
+    bar.style.width = "100%";
+    setTimeout(function () {
+      bar.classList.add("done");
+      setTimeout(function () {
+        bar.className = "";
+        bar.style.width = "0%";
+      }, 500);
+    }, 100);
+  }
+
+  function fail() {
+    if (!bar) return;
+    clearInterval(timer);
+    bar.style.background = "#dc3545";
+    bar.style.width = "100%";
+    setTimeout(function () {
+      bar.className = "";
+      bar.style.width = "0%";
+      bar.style.background = "";
+    }, 500);
+  }
+
+  return { start, done, fail };
+})();
+
 // ============================================
+// NAVIGATION LOADING - ipakita ang bar kapag
+// nag-click ng nav link
+// ============================================
+document.addEventListener("DOMContentLoaded", function () {
+  // I-intercept ang lahat ng internal na link clicks
+  document.addEventListener("click", function (e) {
+    const link = e.target.closest("a");
+    if (!link) return;
+
+    const href = link.getAttribute("href");
+    if (!href) return;
+
+    // Skip: blank links, anchors lang, external links, logout, JS links
+    if (
+      href === "#" ||
+      href === "" ||
+      href.startsWith("#") ||
+      href.startsWith("javascript:") ||
+      href.startsWith("mailto:") ||
+      href.startsWith("tel:") ||
+      link.target === "_blank" ||
+      link.hasAttribute("data-bs-toggle") || // dropdown, modal triggers
+      link.hasAttribute("data-bs-dismiss") ||
+      href.includes("logout.php") // huwag i-loading bar ang logout
+    )
+      return;
+
+    // External link check
+    try {
+      const url = new URL(href, window.location.origin);
+      if (url.origin !== window.location.origin) return;
+      // Kung same page lang (same pathname + different query lang)
+      // ipakita pa rin ang bar para sa feedback
+    } catch (err) {
+      return;
+    }
+
+    // Start the loading bar!
+    PageLoader.start();
+  });
+
+  // Kapag nag-load na ang page, tapusin ang bar
+  window.addEventListener("pageshow", function () {
+    PageLoader.done();
+  });
+
+  // Kapag nag-error ang navigation
+  window.addEventListener("pagehide", function () {
+    // Cleanup lang
+  });
+
+  // ============================================
+  // LINK PREFETCHING ON HOVER
+  // Mag-preload ng page habang nag-hho-hover
+  // sa nav link para instant ang click
+  // ============================================
+  const prefetchedUrls = new Set();
+
+  function prefetchLink(href) {
+    if (!href || prefetchedUrls.has(href)) return;
+    if (href.startsWith("#") || href.startsWith("javascript:")) return;
+
+    // External link check
+    try {
+      const url = new URL(href, window.location.origin);
+      if (url.origin !== window.location.origin) return;
+    } catch (e) {
+      return;
+    }
+
+    prefetchedUrls.add(href);
+
+    // Gumamit ng <link rel="prefetch"> para mag-download ng page sa background
+    const link = document.createElement("link");
+    link.rel = "prefetch";
+    link.href = href;
+    link.as = "document";
+    document.head.appendChild(link);
+  }
+
+  // I-apply ang prefetch sa sidebar nav links
+  const navLinks = document.querySelectorAll(".sidebar-menu a, .navbar-nav a");
+  navLinks.forEach(function (link) {
+    const href = link.getAttribute("href");
+    if (!href || href === "#" || href.includes("logout")) return;
+
+    // Prefetch on hover (after 150ms para hindi mag-prefetch ng bawat hover)
+    let hoverTimer;
+    link.addEventListener("mouseenter", function () {
+      hoverTimer = setTimeout(function () {
+        prefetchLink(href);
+        link.setAttribute("data-prefetched", "true");
+      }, 150);
+    });
+    link.addEventListener("mouseleave", function () {
+      clearTimeout(hoverTimer);
+    });
+
+    // Prefetch on touch (mobile) - kapag nag-touchstart
+    link.addEventListener(
+      "touchstart",
+      function () {
+        prefetchLink(href);
+      },
+      { passive: true },
+    );
+  });
+
+  // ============================================
+  // ALSO PREFETCH ON FOCUS (keyboard navigation)
+  // ============================================
+  document.querySelectorAll(".sidebar-menu a").forEach(function (link) {
+    link.addEventListener("focus", function () {
+      prefetchLink(this.getAttribute("href"));
+    });
+  });
+});
+
+// ============================================
+// ERROR HANDLING: Kung hindi ma-load ang page
+// ============================================
+window.addEventListener(
+  "error",
+  function (e) {
+    // Huwag i-fail ang bar sa JS errors, sa network errors lang
+  },
+  true,
+);
 
 // Wait for DOM to be fully loaded
 document.addEventListener("DOMContentLoaded", function () {
