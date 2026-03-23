@@ -27,14 +27,14 @@ if (!empty($current_user['avatar_url'])) {
 }
 ?>
 
-<!-- Sidebar Overlay (dark background kapag bukas ang sidebar sa mobile) -->
+<!-- Sidebar Overlay -->
 <div class="sidebar-overlay" 
      id="sidebarOverlay"
      onclick="document.getElementById('sidebar').classList.remove('active'); this.classList.remove('active'); document.body.style.overflow='';"></div>
 
 <!-- Sidebar Navigation -->
 <div class="sidebar" id="sidebar">
-    <!-- Close button - visible sa mobile lang -->
+    <!-- Close button -->
     <button class="sidebar-close-btn" 
             id="sidebarCloseBtn" 
             onclick="document.getElementById('sidebar').classList.remove('active'); document.getElementById('sidebarOverlay').classList.remove('active'); document.body.style.overflow='';"
@@ -42,16 +42,13 @@ if (!empty($current_user['avatar_url'])) {
         <i class="bi bi-x-lg"></i>
     </button>
     <div class="sidebar-brand">
-        <!-- Barangay Logo -->
         <img src="<?php echo SITE_URL; ?>assets/images/barangay-logo.jpg" 
             alt="Barangay Logo" 
             class="sidebar-logo"
             style="width: 80px; height: 80px; object-fit: cover; border-radius: 50%; margin-bottom: 10px; border: 3px solid rgba(255,255,255,0.3);">
         
-        <!-- System Name -->
         <div><?php echo $is_admin ? 'Barangay San Cristobal' : 'Barangay San Cristobal'; ?></div>
         
-          <!-- Subtitle -->
         <small class="d-block mt-1" style="font-size: 0.75rem; opacity: 0.8;">
             <?php echo $is_admin ? '' : ''; ?>
         </small>
@@ -80,7 +77,7 @@ if (!empty($current_user['avatar_url'])) {
             </li>
             
             <?php if (isSuperAdmin()): ?>
-            <!-- Super Admin Only Menu Items -->
+            <!-- Super Admin Only -->
             <li>
                 <a href="<?php echo SITE_URL; ?>admin/create_admin.php" 
                    class="<?php echo $current_page == 'create_admin.php' ? 'active' : ''; ?>">
@@ -95,26 +92,25 @@ if (!empty($current_user['avatar_url'])) {
             </li>
 
             <li>
-    <a href="<?php echo SITE_URL; ?>admin/pending_users.php" 
-       class="<?php echo $current_page == 'pending_users.php' ? 'active' : ''; ?>">
-        <i class="bi bi-hourglass-split"></i> Pending Approvals
-        <?php
-        $pending_count = $conn->query("SELECT COUNT(*) as count FROM users WHERE approval_status = 'pending' AND role = 'user' AND email_verified = 1")->fetch_assoc()['count'];
-                if ($pending_count > 0):
+                <a href="<?php echo SITE_URL; ?>admin/pending_users.php" 
+                   class="<?php echo $current_page == 'pending_users.php' ? 'active' : ''; ?>">
+                    <i class="bi bi-hourglass-split"></i> Pending Approvals
+                    <?php
+                    $pending_count = $conn->query("SELECT COUNT(*) as count FROM users WHERE approval_status = 'pending' AND role = 'user' AND email_verified = 1")->fetch_assoc()['count'];
+                    if ($pending_count > 0):
                     ?>
-            <span class="badge bg-warning text-dark ms-2"><?php echo $pending_count; ?></span>
-        <?php endif; ?>
-    </a>
-</li>
-    <li class="nav-item">
-        <a class="nav-link" href="review_complaints.php">
-            <i class="bi bi-shield-check"></i> Review
-            <?php if ($pending_review > 0): ?>
-                <span class="badge bg-warning text-dark"><?php echo $pending_review; ?></span>
-            <?php endif; ?>
-        </a>
-    </li>
-
+                        <span class="badge bg-warning text-dark ms-2"><?php echo $pending_count; ?></span>
+                    <?php endif; ?>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="<?php echo SITE_URL; ?>admin/review_complaints.php">
+                    <i class="bi bi-shield-check"></i> Review
+                    <?php if ($pending_review > 0): ?>
+                        <span class="badge bg-warning text-dark"><?php echo $pending_review; ?></span>
+                    <?php endif; ?>
+                </a>
+            </li>
             <?php endif; ?>
             
             <li>
@@ -123,24 +119,26 @@ if (!empty($current_user['avatar_url'])) {
                     <i class="bi bi-graph-up"></i> Reports
                 </a>
             </li>
-            <li>
 
             <?php if (isSuperAdmin()): ?>
-<li>
-    <a href="<?php echo SITE_URL; ?>admin/activity_logs.php" 
-       class="<?php echo $current_page == 'activity_logs.php' ? 'active' : ''; ?>">
-        <i class="bi bi-shield-check"></i> Activity Logs
-    </a>
-</li>
-<?php endif; ?>
-<?php if (isSuperAdmin()): ?>
-<li>
-    <a href="<?php echo SITE_URL; ?>admin/backup.php"
-       class="<?php echo $current_page == 'backup.php' ? 'active' : ''; ?>">
-        <i class="bi bi-database-down"></i> Backup
-    </a>
-</li>
-<?php endif; ?>
+            <li>
+                <a href="<?php echo SITE_URL; ?>admin/activity_logs.php" 
+                   class="<?php echo $current_page == 'activity_logs.php' ? 'active' : ''; ?>">
+                    <i class="bi bi-shield-check"></i> Activity Logs
+                </a>
+            </li>
+            <?php endif; ?>
+
+            <?php if (isSuperAdmin()): ?>
+            <li>
+                <a href="<?php echo SITE_URL; ?>admin/backup.php"
+                   class="<?php echo $current_page == 'backup.php' ? 'active' : ''; ?>">
+                    <i class="bi bi-database-down"></i> Backup
+                </a>
+            </li>
+            <?php endif; ?>
+
+            <li>
                 <a href="<?php echo SITE_URL; ?>admin/profile.php" 
                    class="<?php echo $current_page == 'profile.php' && $current_dir == 'admin' ? 'active' : ''; ?>">
                     <i class="bi bi-person"></i> My Profile
@@ -175,7 +173,7 @@ if (!empty($current_user['avatar_url'])) {
             </li>
         <?php endif; ?>
         
-        <!-- ========== COMMON MENU ITEMS ========== -->
+        <!-- COMMON MENU -->
         <li class="mt-3" style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px;">
             <a href="<?php echo SITE_URL; ?>auth/logout.php" onclick="return confirm('Are you sure you want to logout?');">
                 <i class="bi bi-box-arrow-right"></i> Logout
@@ -183,7 +181,7 @@ if (!empty($current_user['avatar_url'])) {
         </li>
     </ul>
 
-      <!-- Online Users Widget -->
+    <!-- Online Users Widget -->
     <div class="online-users-widget" style="margin: 15px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 10px;">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h6 class="mb-0" style="color: white; font-size: 0.85rem;">
@@ -213,10 +211,10 @@ if (!empty($current_user['avatar_url'])) {
                      style="object-fit: cover;"
                      alt="Profile">
             <?php else: ?>
-            <div class="user-avatar me-2">
-                <?php echo strtoupper(substr($_SESSION['full_name'], 0, 1)); ?>
-            </div>
-        <?php endif; ?>
+                <div class="user-avatar me-2">
+                    <?php echo strtoupper(substr($_SESSION['full_name'], 0, 1)); ?>
+                </div>
+            <?php endif; ?>
             <div style="color: white; font-size: 0.85rem;">
                 <div style="font-weight: 600;"><?php echo $_SESSION['full_name']; ?></div>
                 <small style="opacity: 0.8;"><?php echo $_SESSION['email']; ?></small>
@@ -230,7 +228,6 @@ if (!empty($current_user['avatar_url'])) {
     <!-- Top Navbar -->
     <div class="top-navbar">
         <div class="navbar-left">
-            <!-- Mobile hamburger button with direct inline code -->
             <button class="mobile-menu-btn d-md-none" 
                     id="mobileSidebarToggle" 
                     aria-label="Menu">
@@ -244,22 +241,18 @@ if (!empty($current_user['avatar_url'])) {
             </div>
         </div>
         
-        <!-- Right side - icons visible on all screens -->
         <div class="navbar-right d-flex align-items-center gap-2">
-            <button class="dark-mode-toggle" 
-                    id="darkModeToggle"
-                    aria-label="Toggle Dark Mode" 
-                    title="Toggle Dark Mode">
+            <button class="dark-mode-toggle" id="darkModeToggle" aria-label="Toggle Dark Mode">
                 <i class="bi bi-moon-stars-fill" id="darkModeIcon"></i>
             </button>
             
-           
             <?php
-                        $unread_count = getUnreadNotificationCount($_SESSION['user_id']);
-$recent_notifications = getRecentNotifications($_SESSION['user_id'], 5);
-?>
+            $unread_count = getUnreadNotificationCount($_SESSION['user_id']);
+            $recent_notifications = getRecentNotifications($_SESSION['user_id'], 5);
+            ?>
+            
             <div class="dropdown">
-                <button class="btn btn-link position-relative p-0 notification-btn" type="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
+                <button class="btn btn-link position-relative p-0 notification-btn" type="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="bi bi-bell-fill" style="font-size: 1.3rem; color: #667eea;"></i>
                     <?php if ($unread_count > 0): ?>
                         <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">
@@ -278,25 +271,20 @@ $recent_notifications = getRecentNotifications($_SESSION['user_id'], 5);
                     </li>
                     <li><hr class="dropdown-divider"></li>
                     
-                    <?php if (!empty($recent_notifications)): ?>
-                        <?php foreach ($recent_notifications as $notif): ?>
+                    <!-- FIXED NOTIFICATIONS LOOP -->
+                    <?php if ($recent_notifications && $recent_notifications->num_rows > 0): ?>
+                        <?php while ($notif = $recent_notifications->fetch_assoc()): ?>
                             <li>
                                 <a class="dropdown-item <?php echo $notif['is_read'] == 0 ? 'bg-light' : ''; ?>" 
                                    href="<?php echo SITE_URL . ($is_admin ? 'admin' : 'user'); ?>/notifications.php?read=<?php echo $notif['notification_id']; ?>">
                                     <div class="d-flex align-items-start">
                                         <div class="me-2">
                                             <?php
-                                $icon_class = 'bi-info-circle text-info';
-                            if ($notif['type'] == 'success') {
-                                $icon_class = 'bi-check-circle text-success';
-                            }
-                            if ($notif['type'] == 'warning') {
-                                $icon_class = 'bi-exclamation-triangle text-warning';
-                            }
-                            if ($notif['type'] == 'danger') {
-                                $icon_class = 'bi-x-circle text-danger';
-                            }
-                            ?>
+                                            $icon_class = 'bi-info-circle text-info';
+                                            if ($notif['type'] == 'success') $icon_class = 'bi-check-circle text-success';
+                                            if ($notif['type'] == 'warning') $icon_class = 'bi-exclamation-triangle text-warning';
+                                            if ($notif['type'] == 'danger') $icon_class = 'bi-x-circle text-danger';
+                                            ?>
                                             <i class="bi <?php echo $icon_class; ?>"></i>
                                         </div>
                                         <div class="flex-grow-1">
@@ -317,7 +305,7 @@ $recent_notifications = getRecentNotifications($_SESSION['user_id'], 5);
                                 </a>
                             </li>
                             <li><hr class="dropdown-divider"></li>
-                        <?php endforeach; ?>
+                        <?php endwhile; ?>
                         <li class="text-center">
                             <a href="<?php echo SITE_URL . ($is_admin ? 'admin' : 'user'); ?>/notifications.php" class="dropdown-item text-primary">
                                 <strong>View All Notifications</strong>
@@ -332,35 +320,24 @@ $recent_notifications = getRecentNotifications($_SESSION['user_id'], 5);
                 </ul>
             </div>
             
-        
-            <?php
-            
-?>
-
+            <!-- User Profile Dropdown -->
             <div class="dropdown user-profile-dropdown">
                 <button class="btn btn-link p-0 d-flex align-items-center gap-2" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="text-decoration: none;">
                     <?php if ($profile_img_url): ?>
                         <img src="<?php echo htmlspecialchars($profile_img_url); ?>" 
                              class="rounded-circle user-avatar-img" 
-                             width="36" 
-                             height="36" 
+                             width="36" height="36" 
                              style="object-fit: cover;"
                              alt="Profile">
                     <?php else: ?>
-                                <div class="user-avatar" 
-                style="width: 36px; height: 36px; font-size: 1rem; 
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                        border-radius: 50%;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        color: white;
-                        font-weight: 700;">
-                <?php echo strtoupper(substr($_SESSION['full_name'], 0, 1)); ?>
-                </div>
+                        <div class="user-avatar" 
+                             style="width: 36px; height: 36px; font-size: 1rem; 
+                                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                    border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700;">
+                            <?php echo strtoupper(substr($_SESSION['full_name'], 0, 1)); ?>
+                        </div>
                     <?php endif; ?>
                     
-                    <!-- User name/email - hidden on mobile -->
                     <div class="user-details d-none d-md-block text-start">
                         <div class="user-name" style="font-size: 0.9rem; font-weight: 600; line-height: 1.2; color: var(--text-primary);">
                             <?php echo htmlspecialchars(strlen($_SESSION['full_name']) > 20 ? substr($_SESSION['full_name'], 0, 20) . '...' : $_SESSION['full_name']); ?>
@@ -391,6 +368,5 @@ $recent_notifications = getRecentNotifications($_SESSION['user_id'], 5);
         </div>
     </div>
 
-    
     <!-- Page Content Container -->
     <div class="page-content">
