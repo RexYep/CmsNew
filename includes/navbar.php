@@ -247,12 +247,12 @@ if (!empty($current_user['avatar_url'])) {
             </button>
             
             <?php
-            $unread_count = getUnreadNotificationCount($_SESSION['user_id']);
+            $unread_count       = getUnreadNotificationCount($_SESSION['user_id']);
             $recent_notifications = getRecentNotifications($_SESSION['user_id'], 5);
             ?>
             
             <div class="dropdown">
-                <button class="btn btn-link position-relative p-0 notification-btn" type="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn btn-link position-relative p-0 notification-btn" type="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
                     <i class="bi bi-bell-fill" style="font-size: 1.3rem; color: #667eea;"></i>
                     <?php if ($unread_count > 0): ?>
                         <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">
@@ -260,6 +260,7 @@ if (!empty($current_user['avatar_url'])) {
                         </span>
                     <?php endif; ?>
                 </button>
+                
                 <ul class="dropdown-menu dropdown-menu-end notification-dropdown" aria-labelledby="notificationDropdown" style="width: 320px; max-height: 400px; overflow-y: auto;">
                     <li class="dropdown-header d-flex justify-content-between align-items-center">
                         <span><strong>Notifications</strong></span>
@@ -271,32 +272,33 @@ if (!empty($current_user['avatar_url'])) {
                     </li>
                     <li><hr class="dropdown-divider"></li>
                     
-                    <!-- FIXED NOTIFICATIONS LOOP -->
-                    <?php if ($recent_notifications && $recent_notifications->num_rows > 0): ?>
-                        <?php while ($notif = $recent_notifications->fetch_assoc()): ?>
+                    <!-- SAFE VERSION - array + walang undefined function -->
+                    <?php if (!empty($recent_notifications)): ?>
+                        <?php foreach ($recent_notifications as $notif): ?>
                             <li>
-                                <a class="dropdown-item <?php echo $notif['is_read'] == 0 ? 'bg-light' : ''; ?>" 
-                                   href="<?php echo SITE_URL . ($is_admin ? 'admin' : 'user'); ?>/notifications.php?read=<?php echo $notif['notification_id']; ?>">
+                                <a class="dropdown-item <?php echo ($notif['is_read'] ?? 0) == 0 ? 'bg-light' : ''; ?>" 
+                                   href="<?php echo SITE_URL . ($is_admin ? 'admin' : 'user'); ?>/notifications.php?read=<?php echo $notif['notification_id'] ?? 0; ?>">
                                     <div class="d-flex align-items-start">
                                         <div class="me-2">
                                             <?php
                                             $icon_class = 'bi-info-circle text-info';
-                                            if ($notif['type'] == 'success') $icon_class = 'bi-check-circle text-success';
-                                            if ($notif['type'] == 'warning') $icon_class = 'bi-exclamation-triangle text-warning';
-                                            if ($notif['type'] == 'danger') $icon_class = 'bi-x-circle text-danger';
+                                            if (($notif['type'] ?? '') === 'success') $icon_class = 'bi-check-circle text-success';
+                                            if (($notif['type'] ?? '') === 'warning') $icon_class = 'bi-exclamation-triangle text-warning';
+                                            if (($notif['type'] ?? '') === 'danger')  $icon_class = 'bi-x-circle text-danger';
                                             ?>
                                             <i class="bi <?php echo $icon_class; ?>"></i>
                                         </div>
                                         <div class="flex-grow-1">
-                                            <strong><?php echo htmlspecialchars($notif['title']); ?></strong>
+                                            <strong><?php echo htmlspecialchars($notif['title'] ?? 'Notification'); ?></strong>
                                             <p class="mb-1 small text-muted">
-                                                <?php echo htmlspecialchars(substr($notif['message'], 0, 80)) . '...'; ?>
+                                                <?php echo htmlspecialchars(substr($notif['message'] ?? '', 0, 80)) . '...'; ?>
                                             </p>
                                             <small class="text-muted">
-                                                <i class="bi bi-clock"></i> <?php echo formatDateTime($notif['created_at']); ?>
+                                                <i class="bi bi-clock"></i> 
+                                                <?php echo date('M j, Y g:i A', strtotime($notif['created_at'] ?? 'now')); ?>
                                             </small>
                                         </div>
-                                        <?php if ($notif['is_read'] == 0): ?>
+                                        <?php if (($notif['is_read'] ?? 0) == 0): ?>
                                             <div class="ms-2">
                                                 <span class="badge bg-primary rounded-pill">New</span>
                                             </div>
@@ -305,7 +307,8 @@ if (!empty($current_user['avatar_url'])) {
                                 </a>
                             </li>
                             <li><hr class="dropdown-divider"></li>
-                        <?php endwhile; ?>
+                        <?php endforeach; ?>
+                        
                         <li class="text-center">
                             <a href="<?php echo SITE_URL . ($is_admin ? 'admin' : 'user'); ?>/notifications.php" class="dropdown-item text-primary">
                                 <strong>View All Notifications</strong>
@@ -314,12 +317,11 @@ if (!empty($current_user['avatar_url'])) {
                     <?php else: ?>
                         <li class="text-center py-3">
                             <i class="bi bi-bell-slash" style="font-size: 2rem; color: #ddd;"></i>
-                            <p class="text-muted mb-0">No notifications</p>
+                            <p class="text-muted mb-0">No notifications yet</p>
                         </li>
                     <?php endif; ?>
                 </ul>
             </div>
-            
             <!-- User Profile Dropdown -->
             <div class="dropdown user-profile-dropdown">
                 <button class="btn btn-link p-0 d-flex align-items-center gap-2" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="text-decoration: none;">

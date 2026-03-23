@@ -4,8 +4,13 @@
 // admin/index.php
 // ============================================
 
+
 require_once '../config/config.php';
 require_once '../includes/functions.php';
+
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 
 // Ensure user is logged in and is admin
 requireAdmin();
