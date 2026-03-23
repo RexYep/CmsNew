@@ -1,11 +1,11 @@
 // ============================================
 // SERVICE WORKER - complaint-management-system
 // sw.js (ilagay sa ROOT ng project)
+// FIX: "Response body is already used" error
 // ============================================
 
-const CACHE_NAME = "cms-cache-v1";
+const CACHE_NAME = "cms-cache-v2"; // bumago para ma-force refresh
 
-// Static assets na i-ca-cache (CDN + local)
 const STATIC_ASSETS = [
   "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css",
   "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css",
@@ -13,44 +13,41 @@ const STATIC_ASSETS = [
 ];
 
 // ============================================
-// INSTALL - i-cache ang static assets
+// INSTALL
 // ============================================
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
-    }),
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS)),
   );
   self.skipWaiting();
 });
 
 // ============================================
-// ACTIVATE - linisin ang lumang cache
+// ACTIVATE — linisin ang lumang cache
 // ============================================
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name)),
-      );
-    }),
+    caches
+      .keys()
+      .then((cacheNames) =>
+        Promise.all(
+          cacheNames
+            .filter((name) => name !== CACHE_NAME)
+            .map((name) => caches.delete(name)),
+        ),
+      ),
   );
   self.clients.claim();
 });
 
 // ============================================
-// FETCH - Cache Strategy:
-//   CDN assets    → Cache First (basta may cache, gamitin agad)
-//   Local CSS/JS  → Cache First (may network fallback)
-//   PHP pages     → Network First (always fresh data)
+// FETCH
+// FIX: I-clone ang response AGAD bago gamitin
 // ============================================
 self.addEventListener("fetch", (event) => {
-  const url = new URL(event.request.url);
-
-  // Huwag i-cache ang non-GET requests (POST, etc.)
   if (event.request.method !== "GET") return;
+
+  const url = new URL(event.request.url);
 
   // CDN assets → Cache First
   if (
@@ -59,38 +56,44 @@ self.addEventListener("fetch", (event) => {
   ) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
-        return (
-          cached ||
-          fetch(event.request).then((response) => {
-            const cloned = response.clone();
-            caches
-              .open(CACHE_NAME)
-              .then((cache) => cache.put(event.request, cloned));
-            return response;
-          })
-        );
+        if (cached) return cached; // HIT — return agad
+
+        // MISS — fetch tapos i-cache
+        return fetch(event.request).then((response) => {
+          // ✅ FIX: i-clone AGAD bago gamitin ang response
+          const toCache = response.clone();
+          caches
+            .open(CACHE_NAME)
+            .then((cache) => cache.put(event.request, toCache));
+          return response;
+        });
       }),
     );
     return;
   }
 
-  // Local CSS, JS, Images → Cache First + network update
+  // Local CSS, JS, Images → Cache First + background update
   if (
     url.pathname.match(/\.(css|js|png|jpg|jpeg|gif|ico|svg|webp|woff2?|ttf)$/)
   ) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
-        const networkFetch = fetch(event.request).then((response) => {
-          // Clone FIRST bago gamitin ang response
-          const cloned = response.clone();
-          caches
-            .open(CACHE_NAME)
-            .then((cache) => cache.put(event.request, cloned));
-          return response; // original ang ibinabalik, clone ang naka-cache
-        });
+        // ✅ FIX: fetch at i-clone AGAD — huwag hintayin na magamit ang response
+        const networkFetch = fetch(event.request)
+          .then((response) => {
+            const toCache = response.clone(); // ← clone MUNA bago ibalik
+            caches
+              .open(CACHE_NAME)
+              .then((cache) => cache.put(event.request, toCache));
+            return response;
+          })
+          .catch(() => cached); // fallback sa cache kung walang network
+
         return cached || networkFetch;
       }),
     );
     return;
   }
+
+  // PHP pages → Network only (hindi na-cache para laging fresh ang data)
 });
