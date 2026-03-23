@@ -191,9 +191,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_rating'])) {
     }
 }
 
-
 // Handle comment submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_comment'])) {
+    // Block comments on rejected/archived complaints
+    if ($complaint['approval_status'] === 'rejected' || $complaint['is_archived'] == 1) {
+        $error = 'Comments are disabled for rejected complaints.';
+    } else {
+
     $comment_text = sanitizeInput($_POST['comment']);
 
     $result = addComment($complaint_id, $user_id, $comment_text);
@@ -229,6 +233,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_comment'])) {
         exit();
     } else {
         $error = $result['message'];
+    }
     }
 }
 
@@ -569,9 +574,7 @@ if ($attachments->num_rows > 0):
             <br><small class="text-muted"><i class="bi bi-check2"></i> You confirmed this resolution.</small>
         <?php endif; ?>
     </div>
-    
-    <!-- Satisfaction Rating Section -->
-     <!-- Satisfaction Rating Section -->
+
     
     <!-- Show message for rejected complaints -->
     <?php if ($complaint['approval_status'] === 'rejected'): ?>
@@ -927,6 +930,10 @@ if ($reopen_requests->num_rows > 0):
                             <i class="bi bi-send"></i> Post Comment
                         </button>
                     </form>
+                </div>
+                <?php elseif ($complaint['status'] === 'is_archived'): ?>
+                <div class="alert alert-secondary">
+                    <i class="bi bi-lock-fill"></i> Comments are disabled — this complaint has been rejected and archived.
                 </div>
                 <?php else: ?>
                 <div class="alert alert-secondary text-center">

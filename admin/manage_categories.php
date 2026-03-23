@@ -35,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_category'])) {
             $stmt->bind_param("ss", $category_name, $description);
             
             if ($stmt->execute()) {
+                cacheInvalidateCategories(); // ↓ CACHE INVALIDATION
                 $success = 'Category added successfully!';
             } else {
                 $error = 'Failed to add category';
@@ -64,6 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_category'])) {
             $stmt->bind_param("ssi", $category_name, $description, $category_id);
             
             if ($stmt->execute()) {
+                cacheInvalidateCategories(); // ↓ CACHE INVALIDATION
                 $success = 'Category updated successfully!';
             } else {
                 $error = 'Failed to update category';
@@ -89,6 +91,7 @@ if (isset($_GET['toggle_status']) && isset($_GET['id'])) {
     $stmt->bind_param("si", $new_status, $category_id);
     
     if ($stmt->execute()) {
+        cacheInvalidateCategories(); // ↓ CACHE INVALIDATION
         $success = 'Category status updated successfully!';
     } else {
         $error = 'Failed to update status';
@@ -112,6 +115,7 @@ if (isset($_GET['delete']) && isset($_GET['id'])) {
         $stmt->bind_param("i", $category_id);
         
         if ($stmt->execute()) {
+            cacheInvalidateCategories(); // ↓ CACHE INVALIDATION
             $success = 'Category deleted successfully!';
         } else {
             $error = 'Failed to delete category';

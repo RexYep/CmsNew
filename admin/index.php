@@ -21,26 +21,27 @@ if (!isSuperAdmin()) {
 }
 
 // Get statistics
-// Total complaints
-$total_complaints = $conn->query("SELECT COUNT(*) as total FROM complaints $where_clause")->fetch_assoc()['total'];
-
-// Pending complaints
-$pending_complaints = $conn->query("SELECT COUNT(*) as total FROM complaints $where_clause " . ($where_clause ? "AND" : "WHERE") . " status = 'Pending'")->fetch_assoc()['total'];
-
-// In Progress complaints
-$inprogress_complaints = $conn->query("SELECT COUNT(*) as total FROM complaints $where_clause " . ($where_clause ? "AND" : "WHERE") . " status = 'In Progress'")->fetch_assoc()['total'];
-
-// Resolved complaints
-$resolved_complaints = $conn->query("SELECT COUNT(*) as total FROM complaints $where_clause " . ($where_clause ? "AND" : "WHERE") . " status = 'Resolved'")->fetch_assoc()['total'];
-
-// Total users
-$total_users = $conn->query("SELECT COUNT(*) as total FROM users WHERE role = 'user'")->fetch_assoc()['total'];
-
-// Total admins
-$total_admins = $conn->query("SELECT COUNT(*) as total FROM users WHERE role = 'admin'")->fetch_assoc()['total'];
-
-// High priority complaints
-$high_priority = $conn->query("SELECT COUNT(*) as total FROM complaints $where_clause " . ($where_clause ? "AND" : "WHERE") . " priority = 'High' AND status != 'Resolved' AND status != 'Closed'")->fetch_assoc()['total'];
+// ↓ CACHED: Super admin gets cached counts (5 min TTL)
+//   Regular admin still uses direct queries (filtered by assigned_to)
+if (isSuperAdmin()) {
+    $counts             = getAdminDashboardCounts();
+    $total_complaints   = $counts['total'];
+    $pending_complaints = $counts['pending'];
+    $inprogress_complaints = $counts['in_progress'];
+    $resolved_complaints   = $counts['resolved'];
+    $total_users        = $counts['total_users'];
+    $total_admins       = $conn->query("SELECT COUNT(*) as total FROM users WHERE role = 'admin'")->fetch_assoc()['total'];
+    $high_priority      = $conn->query("SELECT COUNT(*) as total FROM complaints WHERE priority = 'High' AND status NOT IN ('Resolved','Closed')")->fetch_assoc()['total'];
+} else {
+    // Regular admin — filtered by assigned_to, no caching
+    $total_complaints      = $conn->query("SELECT COUNT(*) as total FROM complaints $where_clause")->fetch_assoc()['total'];
+    $pending_complaints    = $conn->query("SELECT COUNT(*) as total FROM complaints $where_clause AND status = 'Pending'")->fetch_assoc()['total'];
+    $inprogress_complaints = $conn->query("SELECT COUNT(*) as total FROM complaints $where_clause AND status = 'In Progress'")->fetch_assoc()['total'];
+    $resolved_complaints   = $conn->query("SELECT COUNT(*) as total FROM complaints $where_clause AND status = 'Resolved'")->fetch_assoc()['total'];
+    $total_users           = $conn->query("SELECT COUNT(*) as total FROM users WHERE role = 'user'")->fetch_assoc()['total'];
+    $total_admins          = $conn->query("SELECT COUNT(*) as total FROM users WHERE role = 'admin'")->fetch_assoc()['total'];
+    $high_priority         = $conn->query("SELECT COUNT(*) as total FROM complaints $where_clause AND priority = 'High' AND status NOT IN ('Resolved','Closed')")->fetch_assoc()['total'];
+}
 
 // Recent complaints (last 10)
 $recent_query = "

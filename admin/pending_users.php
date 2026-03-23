@@ -67,12 +67,11 @@ if (isset($_GET['action']) && isset($_GET['user_id'])) {
 $pending_users = $conn->query("
     SELECT user_id, full_name, email, phone, address, proof_photo, created_at, profile_picture 
     FROM users 
-    WHERE approval_status = 'pending' AND role = 'user'
+    WHERE approval_status = 'pending' AND role = 'user' AND email_verified = 1
     ORDER BY created_at DESC
 ");
-
 // Get counts
-$pending_count = $conn->query("SELECT COUNT(*) as count FROM users WHERE approval_status = 'pending' AND role = 'user'")->fetch_assoc()['count'];
+$pending_count = $conn->query("SELECT COUNT(*) as count FROM users WHERE approval_status = 'pending' AND role = 'user' AND email_verified = 1")->fetch_assoc()['count'];
 $approved_count = $conn->query("SELECT COUNT(*) as count FROM users WHERE approval_status = 'approved' AND role = 'user'")->fetch_assoc()['count'];
 $rejected_count = $conn->query("SELECT COUNT(*) as count FROM users WHERE approval_status = 'rejected' AND role = 'user'")->fetch_assoc()['count'];
 

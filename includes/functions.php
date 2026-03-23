@@ -121,13 +121,19 @@ if ($result->num_rows > 0) {
     $hashed_password = hashPassword($password);
 
     // Insert user with pending approval status
-    $approval_status = 'pending'; // Users need approval
-    $stmt = $conn->prepare("INSERT INTO users (full_name, email, phone, password, role, approval_status, address, proof_photo, proof_photo_public_id) VALUES (?, ?, ?, ?, 'user', ?, ?, ?, ?)");
-    $stmt->bind_param("ssssssss", $full_name, $email, $phone, $hashed_password, $approval_status, $address, $proof_photo, $proof_photo_public_id);
+   $verification_token = bin2hex(random_bytes(32));
+$token_expires_at   = date('Y-m-d H:i:s', strtotime('+24 hours'));
+$approval_status    = 'pending';
 
-    if ($stmt->execute()) {
-        return ['success' => true, 'message' => 'Registration successful'];
-    } else {
+$stmt = $conn->prepare("INSERT INTO users (full_name, email, phone, password, role, approval_status, address, proof_photo, proof_photo_public_id, email_verified, verification_token, token_expires_at) VALUES (?, ?, ?, ?, 'user', ?, ?, ?, ?, 0, ?, ?)");
+$stmt->bind_param("ssssssssss", $full_name, $email, $phone, $hashed_password, $approval_status, $address, $proof_photo, $proof_photo_public_id, $verification_token, $token_expires_at);
+
+if ($stmt->execute()) {
+    $new_user_id = $conn->insert_id;
+    // Send verification email
+    sendVerificationEmail($email, $full_name, $verification_token);
+    return ['success' => true, 'message' => 'Registration successful', 'user_id' => $new_user_id];
+} else {
         return ['success' => false, 'message' => 'Registration failed. Please try again'];
     }
 }
@@ -697,6 +703,70 @@ function sendApprovalEmail($user_email, $user_name, $status)
     }
 
     return sendEmail($user_email, $subject, $message);
+}
+
+// ============================================
+// EMAIL VERIFICATION
+// ============================================
+function sendVerificationEmail($email, $full_name, $token)
+{
+    $verify_url = (defined('SITE_URL') ? SITE_URL : '') . "auth/verify_email.php?token=" . $token;
+    $subject    = "Verify Your Email - " . (defined('SITE_NAME') ? SITE_NAME : 'CMS');
+    $message    = "
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 20px auto; background: white; }
+            .header { background: linear-gradient(135deg, #0d1b2a 0%, #1a2f48 100%); color: white; padding: 30px; text-align: center; }
+            .content { padding: 30px; }
+            .btn { display: inline-block; padding: 14px 32px; background: #00c2e0; color: #0d1b2a; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
+            .footer { text-align: center; padding: 20px; color: #6c757d; font-size: 12px; background: #f8f9fa; }
+            .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin-top: 20px; font-size: 13px; }
+        </style>
+    </head>
+    <body>
+        <div class='container'>
+            <div class='header'>
+                <h1>✉️ Verify Your Email</h1>
+            </div>
+            <div class='content'>
+                <h2>Hello " . htmlspecialchars($full_name) . ",</h2>
+                <p>Thank you for registering! Please verify your email address by clicking the button below.</p>
+                <p>Once verified, your account will be submitted for admin approval.</p>
+                <div style='text-align: center;'>
+                    <a href='" . $verify_url . "' class='btn'>✅ Verify My Email</a>
+                </div>
+                <div class='warning'>
+                    ⚠️ This link expires in <strong>24 hours</strong>. If you did not register, ignore this email.
+                </div>
+                <p style='margin-top: 20px; font-size: 13px; color: #6c757d;'>
+                    Or copy this link: <br><small>" . $verify_url . "</small>
+                </p>
+            </div>
+            <div class='footer'>
+                <p>&copy; " . date('Y') . " " . (defined('SITE_NAME') ? SITE_NAME : 'CMS') . ". All rights reserved.</p>
+            </div>
+        </div>
+    </body>
+    </html>";
+
+    return sendEmail($email, $subject, $message);
+}
+
+function cleanUnverifiedAccounts()
+{
+    global $conn;
+    // Delete unverified accounts older than 24 hours
+    $stmt = $conn->prepare("
+        DELETE FROM users 
+        WHERE email_verified = 0 
+        AND token_expires_at < NOW() 
+        AND role = 'user'
+    ");
+    $stmt->execute();
+    return $stmt->affected_rows;
 }
 // Function to check daily complaint limit
 function checkDailyComplaintLimit($user_id)

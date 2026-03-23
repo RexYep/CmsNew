@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (empty($error)) {
                     $result = registerUser($full_name, $email, $phone, $password, $address, $proof_photo, $proof_photo_public_id);
                     if ($result['success']) {
-                        $success   = 'Registration successful! Your account is pending approval. You will receive an email once your account is approved by an administrator.';
+                        $success = 'Registration successful! Please check your email to verify your account before it can be reviewed by our admin.';
                         $full_name = $email = $phone = $address = '';
                     } else {
                         $error = $result['message'];
@@ -510,7 +510,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <i class="bi bi-check-circle-fill"></i>
             <div>
                 <strong>Registration submitted!</strong><br>
-                Your account is pending admin approval. We'll email you once it's approved.
+               Please check your email to verify your account before it can be reviewed by our admin.
             </div>
         </div>
         <?php else: ?>

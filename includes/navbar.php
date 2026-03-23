@@ -99,7 +99,7 @@ if (!empty($current_user['avatar_url'])) {
        class="<?php echo $current_page == 'pending_users.php' ? 'active' : ''; ?>">
         <i class="bi bi-hourglass-split"></i> Pending Approvals
         <?php
-        $pending_count = $conn->query("SELECT COUNT(*) as count FROM users WHERE approval_status = 'pending' AND role = 'user'")->fetch_assoc()['count'];
+        $pending_count = $conn->query("SELECT COUNT(*) as count FROM users WHERE approval_status = 'pending' AND role = 'user' AND email_verified = 1")->fetch_assoc()['count'];
                 if ($pending_count > 0):
                     ?>
             <span class="badge bg-warning text-dark ms-2"><?php echo $pending_count; ?></span>
@@ -278,8 +278,8 @@ $recent_notifications = getRecentNotifications($_SESSION['user_id'], 5);
                     </li>
                     <li><hr class="dropdown-divider"></li>
                     
-                    <?php if ($recent_notifications->num_rows > 0): ?>
-                        <?php while ($notif = $recent_notifications->fetch_assoc()): ?>
+                    <?php if (!empty($recent_notifications)): ?>
+                        <?php foreach ($recent_notifications as $notif): ?>
                             <li>
                                 <a class="dropdown-item <?php echo $notif['is_read'] == 0 ? 'bg-light' : ''; ?>" 
                                    href="<?php echo SITE_URL . ($is_admin ? 'admin' : 'user'); ?>/notifications.php?read=<?php echo $notif['notification_id']; ?>">
@@ -317,7 +317,7 @@ $recent_notifications = getRecentNotifications($_SESSION['user_id'], 5);
                                 </a>
                             </li>
                             <li><hr class="dropdown-divider"></li>
-                        <?php endwhile; ?>
+                        <?php endforeach; ?>
                         <li class="text-center">
                             <a href="<?php echo SITE_URL . ($is_admin ? 'admin' : 'user'); ?>/notifications.php" class="dropdown-item text-primary">
                                 <strong>View All Notifications</strong>
