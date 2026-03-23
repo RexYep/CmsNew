@@ -81,17 +81,16 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       caches.match(event.request).then((cached) => {
         const networkFetch = fetch(event.request).then((response) => {
+          // Clone FIRST bago gamitin ang response
+          const cloned = response.clone();
           caches
             .open(CACHE_NAME)
-            .then((cache) => cache.put(event.request, response.clone()));
-          return response;
+            .then((cache) => cache.put(event.request, cloned));
+          return response; // original ang ibinabalik, clone ang naka-cache
         });
         return cached || networkFetch;
       }),
     );
     return;
   }
-
-  // PHP Pages → Network First (para laging fresh ang data)
-  // Walang caching para sa PHP pages
 });
