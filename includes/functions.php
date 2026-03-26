@@ -3201,8 +3201,7 @@ function getIPLocation($ip) {
     if (empty($ip) || $ip === '127.0.0.1' || str_starts_with($ip, '192.168.') || str_starts_with($ip, '10.') || str_starts_with($ip, '172.')) {
         return 'Local Network';
     }
-
-    $url = "http://ip-api.com/json/{$ip}?fields=status,city,regionName,country";
+    $url = "https://ipinfo.io/{$ip}/json";
 
     $ch = curl_init($url);
     curl_setopt_array($ch, [
@@ -3217,13 +3216,12 @@ function getIPLocation($ip) {
     if (!$response || $http_code !== 200) return 'Unknown';
 
     $data = json_decode($response, true);
-
-    if (!$data || $data['status'] !== 'success') return 'Unknown';
+    if (!$data || isset($data['error'])) return 'Unknown';
 
     $parts = array_filter([
-        $data['city']       ?? '',
-        $data['regionName'] ?? '',
-        $data['country']    ?? '',
+        $data['city']    ?? '',
+        $data['region']  ?? '',
+        $data['country'] ?? '',
     ]);
 
     return implode(', ', $parts) ?: null;

@@ -291,3 +291,55 @@ function showSecurityError($errors) {
         echo '</div>';
     }
 }
+
+
+function checkProgressiveRateLimit($action) {
+    global $conn;
+
+    $ip_address = getClientIP();
+    $current_time = time();
+
+    createRateLimitTable();
+
+ 
+    $stmt = $conn->prepare("
+        SELECT COUNT(*) as total_attempts,
+               MAX(timestamp) as last_attempt
+        FROM rate_limit 
+        WHERE action = ? AND ip_address = ?
+    ");
+    $stmt->bind_param("ss", $action, $ip_address);
+    $stmt->execute();
+    $history = $stmt->get_result()->fetch_assoc();
+
+    $total     = (int)$history['total_attempts'];
+    $last_time = (int)$history['last_attempt'];
+
+    // Progressive penalties based on total attempts
+    if ($total >= 10) {
+        $penalty = 86400; // 24 hours
+        $label   = '24 hours';
+    } elseif ($total >= 6) {
+        $penalty = 1800; // 30 minutes
+        $label   = '30 minutes';
+    } elseif ($total >= 3) {
+        $penalty = 300;  // 5 minutes
+        $label   = '5 minutes';
+    } else {
+        $penalty = 0;
+        $label   = '';
+    }
+
+   
+    if ($penalty > 0 && ($current_time - $last_time) < $penalty) {
+        $wait = $penalty - ($current_time - $last_time);
+        $mins = ceil($wait / 60);
+        return [
+            'allowed' => false,
+            'message' => "Too many registration attempts. Please wait {$label} before trying again.",
+            'wait_seconds' => $wait
+        ];
+    }
+
+    return ['allowed' => true, 'message' => ''];
+}

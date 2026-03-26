@@ -7,7 +7,7 @@
 require_once '../config/config.php';
 require_once '../includes/functions.php';
 
-requireAdmin();
+requireSuperAdmin();
 
 $page_title = "Manage Users";
 
@@ -125,13 +125,11 @@ include '../includes/navbar.php';
     </div>
 <?php endif; ?>
 
-<!-- Permission Info -->
-<?php if (!isSuperAdmin()): ?>
-    <div class="alert alert-warning">
-        <i class="bi bi-shield-exclamation"></i> <strong>Regular Admin:</strong> 
-        You can manage complaints and view users, but only Super Admins can delete user accounts or change admin status.
-    </div>
-<?php endif; ?>
+<!-- Super Admin Access Notice -->
+<div class="alert alert-info d-flex align-items-center mb-3">
+    <i class="bi bi-shield-fill-check me-2 fs-5"></i>
+    <div><strong>Super Admin Access:</strong> You have full control over all user accounts including deletion and admin management.</div>
+</div>
 
 <!-- Filter Section -->
 <div class="row mb-3">

@@ -69,12 +69,14 @@ if (!empty($current_user['avatar_url'])) {
                     <i class="bi bi-folder"></i> Manage Complaints
                 </a>
             </li>
+          <?php if (isSuperAdmin()): ?>
             <li>
                 <a href="<?php echo SITE_URL; ?>admin/manage_users.php" 
-                   class="<?php echo $current_page == 'manage_users.php' ? 'active' : ''; ?>">
+                class="<?php echo $current_page == 'manage_users.php' ? 'active' : ''; ?>">
                     <i class="bi bi-people"></i> Manage Users
                 </a>
             </li>
+            <?php endif; ?>
             
             <?php if (isSuperAdmin()): ?>
             <!-- Super Admin Only -->
