@@ -3198,11 +3198,15 @@ function verify2FACode($user_id, $otp)
 
 function getIPLocation($ip) {
     // Skip private/local IPs
-    if (empty($ip) || $ip === '127.0.0.1' || str_starts_with($ip, '192.168.') || str_starts_with($ip, '10.') || str_starts_with($ip, '172.')) {
+    if (empty($ip) || $ip === '127.0.0.1' ||
+        str_starts_with($ip, '192.168.') ||
+        str_starts_with($ip, '10.') ||
+        str_starts_with($ip, '172.')) {
         return 'Local Network';
     }
-  $token = getenv('IPINFO_TOKEN') ?: '';
-  $url   = "https://ipinfo.io/{$ip}?fields=city,region,country_name" . ($token ? "&token={$token}" : '');
+
+    $token = getenv('IPINFO_TOKEN') ?: '';
+    $url   = "https://ipinfo.io/{$ip}?fields=city,region,country" . ($token ? "&token={$token}" : '');
 
     $ch = curl_init($url);
     curl_setopt_array($ch, [
@@ -3210,6 +3214,7 @@ function getIPLocation($ip) {
         CURLOPT_TIMEOUT        => 3,
         CURLOPT_CONNECTTIMEOUT => 2,
     ]);
+
     $response  = curl_exec($ch);
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
@@ -3219,12 +3224,18 @@ function getIPLocation($ip) {
     $data = json_decode($response, true);
     if (!$data || isset($data['error'])) return 'Unknown';
 
-   $parts = array_filter([
-    $data['city']         ?? '',
-    $data['region']       ?? '',
-    $data['country_name'] ?? '',
-]);
-    return implode(', ', $parts) ?: null;
+    // Convert country code to full name
+    $countryCode = $data['country'] ?? '';
+    $countryName = $countryCode ? @Locale::getDisplayRegion('-' . $countryCode, 'en') : '';
+
+    // Prepare output
+    $parts = array_filter([
+        $data['city']   ?? '',
+        $data['region'] ?? '',
+        $countryName,
+    ]);
+
+    return implode(', ', $parts) ?: 'Unknown';
 }
 
 function getUserDashboardStats(int $user_id): array
