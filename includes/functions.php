@@ -3205,8 +3205,8 @@ function getIPLocation($ip) {
         return 'Local Network';
     }
 
-    $token = getenv('IPINFO_TOKEN') ?: '';
-    $url   = "https://ipinfo.io/{$ip}?fields=city,region,country" . ($token ? "&token={$token}" : '');
+    
+    $url = "https://ipinfo.io/{$ip}/json";
 
     $ch = curl_init($url);
     curl_setopt_array($ch, [
