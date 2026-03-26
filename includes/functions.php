@@ -50,8 +50,10 @@ function logActivity($action, $description = '', $user_id = null) {
     $ip         = getClientIP();
     $user_agent = substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 255);
     $created_at = date('Y-m-d H:i:s');
-    $location   = getIPLocation($ip);
-
+   $location   = getIPLocation($ip);
+if (empty($location)) {
+    $location = 'Unknown';
+}
     $stmt = $conn->prepare("
         INSERT INTO activity_logs (user_id, action, description, ip_address, location, user_agent, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -3197,8 +3199,27 @@ function verify2FACode($user_id, $otp)
 }
 
 function getIPLocation($ip) {
-    // Skip private/local IPs
-    if (empty($ip) || $ip === '127.0.0.1' || str_starts_with($ip, '192.168.') || str_starts_with($ip, '10.') || str_starts_with($ip, '172.')) {
+    if (empty($ip) || $ip === '127.0.0.1' || 
+        str_starts_with($ip, '192.168.') || 
+        str_starts_with($ip, '10.') || 
+        str_starts_with($ip, '172.16.') || 
+        str_starts_with($ip, '172.17.') || 
+        str_starts_with($ip, '172.18.') || 
+        str_starts_with($ip, '172.19.') || 
+        str_starts_with($ip, '172.20.') || 
+        str_starts_with($ip, '172.21.') || 
+        str_starts_with($ip, '172.22.') || 
+        str_starts_with($ip, '172.23.') || 
+        str_starts_with($ip, '172.24.') || 
+        str_starts_with($ip, '172.25.') || 
+        str_starts_with($ip, '172.26.') || 
+        str_starts_with($ip, '172.27.') || 
+        str_starts_with($ip, '172.28.') || 
+        str_starts_with($ip, '172.29.') || 
+        str_starts_with($ip, '172.30.') || 
+        str_starts_with($ip, '172.31.')) {
+        
+        return 'Local Network / Unknown';
     }
 
     $url = "https://ipinfo.io/{$ip}/json";
@@ -3206,25 +3227,36 @@ function getIPLocation($ip) {
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT        => 3,
-        CURLOPT_CONNECTTIMEOUT => 2,
+        CURLOPT_TIMEOUT        => 5,      // increased timeout
+        CURLOPT_CONNECTTIMEOUT => 3,
+        CURLOPT_SSL_VERIFYPEER => true,
     ]);
+
     $response  = curl_exec($ch);
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curl_error = curl_error($ch);
     curl_close($ch);
 
-    if (!$response || $http_code !== 200) return 'Unknown';
+    if ($curl_error || $http_code !== 200 || !$response) {
+        error_log("IP Location failed for {$ip}: " . ($curl_error ?: "HTTP {$http_code}"));
+        return 'Unknown';
+    }
 
     $data = json_decode($response, true);
-    if (!$data || isset($data['error'])) return 'Unknown';
+    if (!$data || isset($data['error']) || isset($data['bogon'])) {
+        return 'Unknown';
+    }
 
+    // Better location string
     $parts = array_filter([
         $data['city']    ?? '',
         $data['region']  ?? '',
-        $data['country'] ?? '',
+        $data['country'] ?? ''
     ]);
 
-    return implode(', ', $parts) ?: null;
+    $location = implode(', ', $parts);
+    
+    return !empty($location) ? $location : 'Unknown';
 }
 
 function getUserDashboardStats(int $user_id): array
