@@ -35,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['archive_complaint']))
         ");
         $stmt->bind_param("isi", $admin_id, $archive_reason, $complaint_id);
         if ($stmt->execute()) {
+            logActivity('complaint_archived', 'Archived complaint #' . $complaint_id);
             $success = "Complaint #$complaint_id has been archived successfully.";
         } else {
             $error = "Failed to archive complaint.";

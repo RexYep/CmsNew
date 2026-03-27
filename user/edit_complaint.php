@@ -74,6 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($error)) {
         
         if ($stmt->execute()) {
             // Resubmit for review
+            logActivity('complaint_edited', 'Edited and resubmitted complaint #' . $complaint_id);
             $result = resubmitComplaint($complaint_id, $user_id);
             
             if ($result['success']) {

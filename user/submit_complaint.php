@@ -171,6 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         cacheInvalidateComplaint(0, $user_id);
 
                         if ($upload_success) {
+                            logActivity('complaint_submitted', 'Submitted complaint #' . $complaint_id);
                             $success = 'Complaint submitted successfully! Tracking ID: #' . $complaint_id;
                             if (!empty($uploaded_files)) {
                                 $success .= '<br>Files uploaded: ' . implode(', ', $uploaded_files);

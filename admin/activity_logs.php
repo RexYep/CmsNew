@@ -133,12 +133,17 @@ $pagination_params = http_build_query([
 function getActionBadge($action)
 {
     $badges = [
-        'login_success'    => ['bg-success',  'bi-check-circle',       'Login Success'],
-        'login_failed'     => ['bg-danger',   'bi-x-circle',           'Login Failed'],
-        'login_2fa_sent'   => ['bg-info',     'bi-shield-lock',        '2FA Sent'],
-        'logout'           => ['bg-secondary','bi-box-arrow-right',    'Logout'],
-        'password_changed' => ['bg-warning',  'bi-key',                'Password Changed'],
-    ];
+    'login_success'       => ['bg-success',  'bi-check-circle',      'Login Success'],
+    'login_failed'        => ['bg-danger',   'bi-x-circle',          'Login Failed'],
+    'login_2fa_sent'      => ['bg-info',     'bi-shield-lock',       '2FA Sent'],
+    'logout'              => ['bg-secondary','bi-box-arrow-right',   'Logout'],
+    'password_changed'    => ['bg-warning',  'bi-key',               'Password Changed'],
+    'backup_created'      => ['bg-primary',  'bi-database-down',     'Backup Created'],
+    'complaint_submitted' => ['bg-success',  'bi-file-earmark-plus', 'Complaint Submitted'],
+    'complaint_edited'    => ['bg-info',     'bi-pencil-square',     'Complaint Edited'],
+    'complaint_archived'  => ['bg-secondary','bi-archive',           'Complaint Archived'],
+    'profile_updated'     => ['bg-warning',  'bi-person-gear',       'Profile Updated'],
+];
     $b = $badges[$action] ?? ['bg-secondary', 'bi-activity', ucfirst(str_replace('_', ' ', $action))];
     return "<span class='badge {$b[0]}'><i class='bi {$b[1]} me-1'></i>{$b[2]}</span>";
 }
@@ -471,13 +476,17 @@ if ($suspicious->num_rows > 0):
 
     // Action badge map
     const badgeMap = {
-        'login_success':    ['bg-success',  'bi-check-circle',    'Login Success'],
-        'login_failed':     ['bg-danger',   'bi-x-circle',        'Login Failed'],
-        'login_2fa_sent':   ['bg-info',     'bi-shield-lock',     '2FA Sent'],
-        'logout':           ['bg-secondary','bi-box-arrow-right', 'Logout'],
-        'password_changed': ['bg-warning',  'bi-key',             'Password Changed'],
-        'backup_created':   ['bg-primary',  'bi-database-down',   'Backup Created'],
-    };
+    'login_success':       ['bg-success',  'bi-check-circle',      'Login Success'],
+    'login_failed':        ['bg-danger',   'bi-x-circle',          'Login Failed'],
+    'login_2fa_sent':      ['bg-info',     'bi-shield-lock',       '2FA Sent'],
+    'logout':              ['bg-secondary','bi-box-arrow-right',   'Logout'],
+    'password_changed':    ['bg-warning',  'bi-key',               'Password Changed'],
+    'backup_created':      ['bg-primary',  'bi-database-down',     'Backup Created'],
+    'complaint_submitted': ['bg-success',  'bi-file-earmark-plus', 'Complaint Submitted'],
+    'complaint_edited':    ['bg-info',     'bi-pencil-square',     'Complaint Edited'],
+    'complaint_archived':  ['bg-secondary','bi-archive',           'Complaint Archived'],
+    'profile_updated':     ['bg-warning',  'bi-person-gear',       'Profile Updated'],
+};
 
     function getBadge(action) {
         const b = badgeMap[action] || ['bg-secondary', 'bi-activity',

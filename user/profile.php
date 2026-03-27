@@ -70,6 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_picture'])) {
                         $stmt->bind_param("ssi", $avatar_url, $avatar_public_id, $user_id);
 
                         if ($stmt->execute()) {
+                            logActivity('profile_updated', 'Updated profile picture');
                             $success = 'Profile picture updated successfully!';
                             error_log("DB UPDATE SUCCESS");
                             $_SESSION['avatar_url'] = $avatar_url;
@@ -102,6 +103,7 @@ if (isset($_GET['delete_picture'])) {
     $stmt->bind_param("i", $user_id);
 
     if ($stmt->execute()) {
+        logActivity('profile_updated', 'Deleted profile picture');
         $success = 'Profile picture deleted successfully';
         unset($_SESSION['avatar_url']);
         $user = getUserById($user_id);
