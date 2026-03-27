@@ -3298,3 +3298,14 @@ pre {
 [data-theme="dark"] {
   --row-archived-bg: #162c3f;
 }
+
+/* Failed login row highlight */
+.failed-login-row {
+  border-left: 4px solid var(--danger-color);
+  background: rgba(220, 53, 69, 0.05);
+}
+
+/* Dark mode */
+[data-theme="dark"] .failed-login-row {
+  background: rgba(220, 53, 69, 0.15);
+}

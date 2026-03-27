@@ -507,7 +507,9 @@ if ($suspicious->num_rows > 0):
 
     function buildRow(log) {
         const isFailedLogin = log.action === 'login_failed';
-        const rowClass = isFailedLogin ? 'table-danger bg-opacity-25 new-log-row' : 'new-log-row';
+        const rowClass = isFailedLogin 
+    ? 'failed-login-row new-log-row'
+    : 'new-log-row';
         const user = log.full_name
             ? `<strong>${escHtml(log.full_name)}</strong><br><small class="text-muted">${escHtml(log.email)}</small>`
             : `<span class="text-muted">—</span>`;
