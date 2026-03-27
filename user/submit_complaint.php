@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         // Validate reCAPTCHA
         if (isRecaptchaConfigured()) {
-            $recaptcha = validateRecaptchaFromPost(0.5);
+            $recaptcha = validateRecaptchaFromPost(0.25);
             if (!$recaptcha['success']) {
                 $error = $recaptcha['message'];
             }

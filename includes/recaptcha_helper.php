@@ -182,7 +182,7 @@ function getRecommendedMinScore($action) {
     $scores = [
         'login' => 0.5,
         'register' => 0.6,
-        'complaint_submit' => 0.5,
+        'complaint_submit' => 0.25,
         'forgot_password' => 0.5,
         'comment' => 0.4
     ];
