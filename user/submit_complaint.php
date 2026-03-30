@@ -70,6 +70,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } elseif (strlen($description) < 20) {
                     $error = 'Description must be at least 20 characters long';
                 } else {
+                    // ─────────────────────────────────────────────────────────────
+                    // STEP 1: Pre-validate ALL files BEFORE inserting the complaint.
+                    // This prevents saving a complaint when an attachment is invalid.
+                    // ─────────────────────────────────────────────────────────────
+                    $allowed_types = [
+                        'image/jpeg', 'image/png', 'image/gif',
+                        'application/pdf',
+                        'application/msword',
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                        'video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/webm'
+                    ];
+                    $video_types      = ['video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/webm'];
+                    $max_size_default = 5  * 1024 * 1024; // 5MB  for images & documents
+                    $max_size_video   = 50 * 1024 * 1024; // 50MB for videos
+
+                    if (!empty($_FILES['attachments']['name'][0])) {
+                        foreach ($_FILES['attachments']['tmp_name'] as $key => $tmp_name) {
+                            $err_code  = $_FILES['attachments']['error'][$key];
+                            $file_name = $_FILES['attachments']['name'][$key];
+
+                            // BUG FIX #3: Properly catch PHP server-level size errors
+                            // (triggered when file exceeds upload_max_filesize / post_max_size in php.ini)
+                            if ($err_code === UPLOAD_ERR_INI_SIZE || $err_code === UPLOAD_ERR_FORM_SIZE) {
+                                $error = "File <strong>$file_name</strong> exceeds the server's maximum allowed upload size. Please choose a smaller file.";
+                                break;
+                            }
+
+                            if ($err_code !== UPLOAD_ERR_OK) {
+                                $error = "An unexpected upload error occurred for <strong>$file_name</strong>. Please try again.";
+                                break;
+                            }
+
+                            $file_type = $_FILES['attachments']['type'][$key];
+                            $file_size = $_FILES['attachments']['size'][$key];
+
+                            // Validate file type
+                            if (!in_array($file_type, $allowed_types)) {
+                                $error = "File type not allowed: <strong>$file_name</strong>. Please upload images, PDF, Word documents, or videos only.";
+                                break;
+                            }
+
+                            // Per-type size validation
+                            $is_video    = in_array($file_type, $video_types);
+                            $max_allowed = $is_video ? $max_size_video : $max_size_default;
+                            $max_label   = $is_video ? '50MB' : '5MB';
+
+                            if ($file_size > $max_allowed) {
+                                $size_mb = number_format($file_size / 1024 / 1024, 2);
+                                $error = "File <strong>$file_name</strong> is too large ({$size_mb}MB). Maximum allowed size for " . ($is_video ? 'videos' : 'images/documents') . " is <strong>$max_label</strong>.";
+                                break;
+                            }
+                        }
+                    }
+
+                    // ─────────────────────────────────────────────────────────────
+                    // STEP 2: Only insert the complaint if file pre-validation passed.
+                    // BUG FIX #2: Complaint is no longer saved when a file is invalid.
+                    // ─────────────────────────────────────────────────────────────
+                    if (empty($error)) {
                     // Insert complaint
                     $stmt = $conn->prepare("INSERT INTO complaints (user_id, category_id, subject, description, priority, status) VALUES (?, ?, ?, ?, ?, 'Pending')");
                     $stmt->bind_param("iisss", $user_id, $category_id, $subject, $description, $priority);
@@ -77,93 +136,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($stmt->execute()) {
                         $complaint_id = $conn->insert_id;
 
-                        // Handle file uploads with CLOUDINARY
+                        // ─────────────────────────────────────────────────────────
+                        // STEP 3: Upload validated files to Cloudinary.
+                        // BUG FIX #1: Upload code is now in the correct place —
+                        // inside the UPLOAD_ERR_OK branch, after validation passes.
+                        // (Previously it was dead code after a `break` in the elseif.)
+                        // ─────────────────────────────────────────────────────────
                         $upload_success = true;
                         $uploaded_files = [];
 
                         if (!empty($_FILES['attachments']['name'][0])) {
-                            $allowed_types = [
-                                'image/jpeg', 'image/png', 'image/gif',
-                                'application/pdf',
-                                'application/msword',
-                                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                                'video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/webm'
-                            ];
-                            $video_types   = ['video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/webm'];
-                            $max_size_default = 5  * 1024 * 1024; // 5MB  for images & documents
-                            $max_size_video   = 50 * 1024 * 1024; // 50MB for videos
-
                             foreach ($_FILES['attachments']['tmp_name'] as $key => $tmp_name) {
-                                if ($_FILES['attachments']['error'][$key] === UPLOAD_ERR_OK) {
-                                    $file_name = $_FILES['attachments']['name'][$key];
-                                    $file_type = $_FILES['attachments']['type'][$key];
-                                    $file_size = $_FILES['attachments']['size'][$key];
+                                if ($_FILES['attachments']['error'][$key] !== UPLOAD_ERR_OK) {
+                                    continue; // already caught in pre-validation; skip
+                                }
 
-                                    // Validate file type
-                                    if (!in_array($file_type, $allowed_types)) {
-                                        $error = "File type not allowed: <strong>$file_name</strong>. Please upload images, PDF, Word documents, or videos only.";
-                                        $upload_success = false;
-                                        break;
-                                    }
+                                $file_name = $_FILES['attachments']['name'][$key];
+                                $file_type = $_FILES['attachments']['type'][$key];
+                                $file_size = $_FILES['attachments']['size'][$key];
 
-                                    // Per-type size validation
-                                    $is_video    = in_array($file_type, $video_types);
-                                    $max_allowed = $is_video ? $max_size_video : $max_size_default;
-                                    $max_label   = $is_video ? '50MB' : '5MB';
+                                // Prepare file array for Cloudinary upload
+                                $file_array = [
+                                    'name'     => $file_name,
+                                    'type'     => $file_type,
+                                    'tmp_name' => $tmp_name,
+                                    'error'    => $_FILES['attachments']['error'][$key],
+                                    'size'     => $file_size
+                                ];
 
-                                    if ($file_size > $max_allowed) {
-                                        $size_mb = number_format($file_size / 1024 / 1024, 2);
-                                        $error = "File <strong>$file_name</strong> is too large ({$size_mb}MB). Maximum allowed size for " . ($is_video ? 'videos' : 'images/documents') . " is <strong>$max_label</strong>.";
-                                        $upload_success = false;
-                                        break;
-                                    }
+                                // Upload to Cloudinary
+                                $upload_result = uploadToCloudinary($file_array, 'complaints');
 
-                                    // PHP upload error check (e.g. server-side post_max_size exceeded)
-                                } elseif ($_FILES['attachments']['error'][$key] === UPLOAD_ERR_INI_SIZE ||
-                                          $_FILES['attachments']['error'][$key] === UPLOAD_ERR_FORM_SIZE) {
-                                    $file_name = $_FILES['attachments']['name'][$key];
+                                if ($upload_result['success']) {
+                                    // Save to database with Cloudinary URLs
+                                    $cloudinary_url           = $upload_result['url'];
+                                    $cloudinary_public_id     = $upload_result['public_id'];
+                                    $cloudinary_resource_type = $upload_result['resource_type'];
 
+                                    $stmt = $conn->prepare("INSERT INTO complaint_attachments (complaint_id, file_name, file_path, cloudinary_url, cloudinary_public_id, cloudinary_resource_type, file_type, file_size) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                                    $stmt->bind_param(
+                                        "issssssi",
+                                        $complaint_id,
+                                        $file_name,
+                                        $cloudinary_url, // Store cloudinary URL as file_path for backward compatibility
+                                        $cloudinary_url,
+                                        $cloudinary_public_id,
+                                        $cloudinary_resource_type,
+                                        $file_type,
+                                        $file_size
+                                    );
+                                    $stmt->execute();
+
+                                    $uploaded_files[] = $file_name;
+                                } else {
+                                    $error = "Failed to upload file: $file_name - " . $upload_result['error'];
                                     $upload_success = false;
                                     break;
-
-                                    // Prepare file array for Cloudinary upload
-                                    $file_array = [
-                                        'name' => $file_name,
-                                        'type' => $file_type,
-                                        'tmp_name' => $tmp_name,
-                                        'error' => $_FILES['attachments']['error'][$key],
-                                        'size' => $file_size
-                                    ];
-
-                                    // Upload to Cloudinary
-                                    $upload_result = uploadToCloudinary($file_array, 'complaints');
-
-                                    if ($upload_result['success']) {
-                                        // Save to database with Cloudinary URLs
-                                        $cloudinary_url = $upload_result['url'];
-                                        $cloudinary_public_id = $upload_result['public_id'];
-                                        $cloudinary_resource_type = $upload_result['resource_type'];
-
-                                        $stmt = $conn->prepare("INSERT INTO complaint_attachments (complaint_id, file_name, file_path, cloudinary_url, cloudinary_public_id, cloudinary_resource_type, file_type, file_size) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                                        $stmt->bind_param(
-                                            "issssssi",
-                                            $complaint_id,
-                                            $file_name,
-                                            $cloudinary_url, // Store cloudinary URL as file_path for backward compatibility
-                                            $cloudinary_url,
-                                            $cloudinary_public_id,
-                                            $cloudinary_resource_type,
-                                            $file_type,
-                                            $file_size
-                                        );
-                                        $stmt->execute();
-
-                                        $uploaded_files[] = $file_name;
-                                    } else {
-                                        $error = "Failed to upload file: $file_name - " . $upload_result['error'];
-                                        $upload_success = false;
-                                        break;
-                                    }
                                 }
                             }
                         }
@@ -200,7 +228,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     } else {
                         $error = 'Failed to submit complaint. Please try again.';
                     }
-                }
+                    } // End file pre-validation check
+                } // Close input validation else
             } // Close the daily limit check
 
         } // End empty($error) check
