@@ -349,7 +349,7 @@ include '../includes/navbar.php';
                     </div>
 
                     <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary" <?php echo !$can_submit ? 'disabled' : ''; ?>>
+                        <button type="submit" id="submitBtn" class="btn btn-primary" <?php echo !$can_submit ? 'disabled' : ''; ?>>
                             <i class="bi bi-send"></i> Submit Complaint
                         </button>
                         <button type="reset" class="btn btn-outline-secondary" <?php echo !$can_submit ? 'disabled' : ''; ?>>
@@ -509,43 +509,58 @@ include '../includes/navbar.php';
         fileList.appendChild(container);
     });
 
-    // ─── Form submit: block if ALL files are oversized; warn if some are ─────
-    const form = document.querySelector('form[enctype="multipart/form-data"]');
-    if (form) {
-        form.addEventListener('submit', function (e) {
-            const input = document.getElementById('attachments');
-            if (!input.files.length) return; // no files – allow submit
+    // ─── Shared file-check logic (used by both click and submit handlers) ───────
+    function checkOversizedFiles(e) {
+        const form  = document.querySelector('form[enctype="multipart/form-data"]');
+        const input = document.getElementById('attachments');
+        if (!input || !input.files.length) return true; // no files – allow
 
-            const files       = Array.from(input.files);
-            const validFiles  = files.filter(f => !isFileOversized(f));
-            const badFiles    = files.filter(f =>  isFileOversized(f));
+        const files      = Array.from(input.files);
+        const validFiles = files.filter(f => !isFileOversized(f));
+        const badFiles   = files.filter(f =>  isFileOversized(f));
 
-            // Block submission if every selected file is oversized
-            if (validFiles.length === 0) {
-                e.preventDefault();
-                const existing = document.getElementById('clientSizeError');
-                if (!existing) {
-                    const alert = document.createElement('div');
-                    alert.id = 'clientSizeError';
-                    alert.className = 'alert alert-danger mt-3';
-                    alert.innerHTML = `
-                        <i class="bi bi-x-octagon-fill me-1"></i>
-                        <strong>Upload blocked!</strong> All selected files exceed the allowed size limit.
-                        Please remove them or choose smaller files before submitting.`;
-                    form.prepend(alert);
-                    alert.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
+        // Remove any previous client-side error
+        const prev = document.getElementById('clientSizeError');
+        if (prev) prev.remove();
+
+        // Block if ALL files are oversized
+        if (validFiles.length === 0) {
+            if (e) e.preventDefault();
+            const alertEl = document.createElement('div');
+            alertEl.id        = 'clientSizeError';
+            alertEl.className = 'alert alert-danger mt-3';
+            alertEl.innerHTML = `
+                <i class="bi bi-x-octagon-fill me-1"></i>
+                <strong>Upload blocked!</strong> All selected files exceed the allowed size limit.
+                Please remove them or choose smaller files before submitting.`;
+            form.prepend(alertEl);
+            alertEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return false; // blocked
+        }
+
+        // Warn if SOME files are oversized
+        if (badFiles.length) {
+            const confirmed = confirm(
+                `⚠️ ${badFiles.length} file(s) exceed the size limit and will NOT be uploaded:\n\n` +
+                badFiles.map(f => `• ${f.name} (${(f.size/1024/1024).toFixed(2)} MB)`).join('\n') +
+                `\n\nThe remaining ${validFiles.length} file(s) will still be submitted. Continue?`
+            );
+            if (!confirmed) { if (e) e.preventDefault(); return false; }
+        }
+
+        return true; // passed
+    }
+
+    // ─── Button CLICK handler — fires BEFORE reCAPTCHA intercepts the submit ──
+    // This is the key fix: reCAPTCHA listens on the button click and submits the
+    // form programmatically, bypassing the form 'submit' event. We must intercept
+    // at the click level first.
+    const submitBtn = document.getElementById('submitBtn');
+    if (submitBtn) {
+        submitBtn.addEventListener('click', function (e) {
+            if (!checkOversizedFiles(e)) {
+                e.stopImmediatePropagation(); // prevent reCAPTCHA from firing
                 return;
-            }
-
-            // Some files are ok → proceed but remind user oversized ones are skipped
-            if (badFiles.length) {
-                const confirmed = confirm(
-                    `⚠️ ${badFiles.length} file(s) exceed the size limit and will NOT be uploaded:\n\n` +
-                    badFiles.map(f => `• ${f.name} (${(f.size/1024/1024).toFixed(2)} MB)`).join('\n') +
-                    `\n\nThe remaining ${validFiles.length} file(s) will still be submitted. Continue?`
-                );
-                if (!confirmed) { e.preventDefault(); return; }
             }
 
             // Animate progress bars for valid files only
@@ -561,6 +576,14 @@ include '../includes/navbar.php';
                     if (progress >= 95) clearInterval(interval);
                 }, 200);
             });
+        }, true); // useCapture=true so this runs before reCAPTCHA's listener
+    }
+
+    // ─── Form submit fallback (catches programmatic submits) ─────────────────
+    const form = document.querySelector('form[enctype="multipart/form-data"]');
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            checkOversizedFiles(e);
         });
     }
 </script>
