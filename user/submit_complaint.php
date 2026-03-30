@@ -89,27 +89,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                                 'video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/webm'
                             ];
-                            $max_file_size = 50 * 1024 * 1024; // 50MB (for videos)
+                            $video_types   = ['video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/webm'];
+                            $max_size_default = 5  * 1024 * 1024; // 5MB  for images & documents
+                            $max_size_video   = 50 * 1024 * 1024; // 50MB for videos
 
                             foreach ($_FILES['attachments']['tmp_name'] as $key => $tmp_name) {
-                                if ($_FILES['attachments']['error'][$key] === 0) {
+                                if ($_FILES['attachments']['error'][$key] === UPLOAD_ERR_OK) {
                                     $file_name = $_FILES['attachments']['name'][$key];
                                     $file_type = $_FILES['attachments']['type'][$key];
                                     $file_size = $_FILES['attachments']['size'][$key];
 
                                     // Validate file type
                                     if (!in_array($file_type, $allowed_types)) {
-                                        $error = "File type not allowed: $file_name";
+                                        $error = "File type not allowed: <strong>$file_name</strong>. Please upload images, PDF, Word documents, or videos only.";
                                         $upload_success = false;
                                         break;
                                     }
 
-                                    // Validate file size
-                                    if ($file_size > $max_file_size) {
-                                        $error = "File too large (max 50MB): $file_name";
+                                    // Per-type size validation
+                                    $is_video    = in_array($file_type, $video_types);
+                                    $max_allowed = $is_video ? $max_size_video : $max_size_default;
+                                    $max_label   = $is_video ? '50MB' : '5MB';
+
+                                    if ($file_size > $max_allowed) {
+                                        $size_mb = number_format($file_size / 1024 / 1024, 2);
+                                        $error = "File <strong>$file_name</strong> is too large ({$size_mb}MB). Maximum allowed size for " . ($is_video ? 'videos' : 'images/documents') . " is <strong>$max_label</strong>.";
                                         $upload_success = false;
                                         break;
                                     }
+
+                                    // PHP upload error check (e.g. server-side post_max_size exceeded)
+                                } elseif ($_FILES['attachments']['error'][$key] === UPLOAD_ERR_INI_SIZE ||
+                                          $_FILES['attachments']['error'][$key] === UPLOAD_ERR_FORM_SIZE) {
+                                    $file_name = $_FILES['attachments']['name'][$key];
+
+                                    $upload_success = false;
+                                    break;
 
                                     // Prepare file array for Cloudinary upload
                                     $file_array = [
@@ -344,138 +359,177 @@ include '../includes/navbar.php';
 </div> <!-- End page-content -->
 
 <script>
-    // Character counter for description
+    // ─── Size limits (must match PHP) ────────────────────────────────────────
+    const MAX_VIDEO_MB    = 50;   // videos
+    const MAX_DEFAULT_MB  = 5;    // images & documents
+    const MAX_VIDEO_BYTES = MAX_VIDEO_MB   * 1024 * 1024;
+    const MAX_DEFAULT_BYTES = MAX_DEFAULT_MB * 1024 * 1024;
+
+    // ─── Character counter ────────────────────────────────────────────────────
     const description = document.getElementById('description');
-    const charCount = document.getElementById('charCount');
-    
-    description.addEventListener('input', function() {
+    const charCount   = document.getElementById('charCount');
+
+    description.addEventListener('input', function () {
         charCount.textContent = this.value.length;
-        
-        if (this.value.length < 20) {
-            charCount.classList.add('text-danger');
-            charCount.classList.remove('text-success');
-        } else {
-            charCount.classList.remove('text-danger');
-            charCount.classList.add('text-success');
-        }
+        charCount.classList.toggle('text-danger',  this.value.length < 20);
+        charCount.classList.toggle('text-success', this.value.length >= 20);
     });
-    
     description.dispatchEvent(new Event('input'));
-    
-    // Enhanced File upload with video preview and progress bar
-    document.getElementById('attachments').addEventListener('change', function() {
+
+    // ─── Helpers ──────────────────────────────────────────────────────────────
+    function getFileLimitBytes(file) {
+        return file.type.startsWith('video/') ? MAX_VIDEO_BYTES : MAX_DEFAULT_BYTES;
+    }
+    function getFileLimitLabel(file) {
+        return file.type.startsWith('video/') ? `${MAX_VIDEO_MB}MB` : `${MAX_DEFAULT_MB}MB`;
+    }
+    function isFileOversized(file) {
+        return file.size > getFileLimitBytes(file);
+    }
+
+    // ─── File input change handler ────────────────────────────────────────────
+    document.getElementById('attachments').addEventListener('change', function () {
         const fileList = document.getElementById('fileList');
         fileList.innerHTML = '';
-        
-        if (this.files.length > 0) {
-            const container = document.createElement('div');
-            container.className = 'mt-3';
-            
-            Array.from(this.files).forEach((file, index) => {
-                const fileSize = (file.size / 1024 / 1024).toFixed(2);
-                const isVideo = file.type.startsWith('video/');
-                const isImage = file.type.startsWith('image/');
-                
-                // Create file item card
-                const fileCard = document.createElement('div');
-                fileCard.className = 'card mb-3';
-                fileCard.innerHTML = `
-                    <div class="card-body">
-                        <div class="row align-items-center">
-                            <div class="col-md-6">
-                                <div class="d-flex align-items-center">
-                                    <i class="bi bi-${isVideo ? 'camera-video' : isImage ? 'image' : 'file-earmark'} fs-3 me-3 text-primary"></i>
-                                    <div>
-                                        <strong>${file.name}</strong><br>
-                                        <small class="text-muted">
-                                            ${fileSize} MB | ${file.type || 'Unknown type'}
-                                        </small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6 text-end">
-                                <span class="badge bg-${fileSize > 50 ? 'danger' : 'success'}">
-                                    ${fileSize > 50 ? 'Too Large!' : 'Ready for Cloudinary'}
-                                </span>
-                            </div>
-                        </div>
-                        
-                        <!-- Preview Area -->
-                        <div class="preview-area mt-3" id="preview-${index}"></div>
-                        
-                        <!-- Progress Bar (initially hidden) -->
-                        <div class="progress mt-3" style="display: none;" id="progress-${index}">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                                 role="progressbar" style="width: 0%">0%</div>
-                        </div>
-                    </div>
-                `;
-                
-                container.appendChild(fileCard);
-                
-                // Generate preview
-                const previewArea = fileCard.querySelector(`#preview-${index}`);
-                
-                if (isImage) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        previewArea.innerHTML = `
-                            <div class="text-center">
-                                <img src="${e.target.result}" class="img-fluid rounded" 
-                                     style="max-height: 200px; max-width: 100%;" 
-                                     alt="Image Preview">
-                            </div>
-                        `;
-                    };
-                    reader.readAsDataURL(file);
-                } else if (isVideo) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        previewArea.innerHTML = `
-                            <div class="text-center">
-                                <video controls class="rounded" style="max-height: 300px; max-width: 100%;">
-                                    <source src="${e.target.result}" type="${file.type}">
-                                    Your browser does not support video preview.
-                                </video>
-                                <div class="mt-2">
-                                    <small class="text-muted">
-                                        <i class="bi bi-play-circle"></i> Video preview - 
-                                        Click play to preview before submitting
+
+        if (!this.files.length) return;
+
+      
+
+        const container = document.createElement('div');
+        container.className = 'mt-3';
+
+        Array.from(this.files).forEach((file, index) => {
+            const fileSizeMB  = (file.size / 1024 / 1024).toFixed(2);
+            const isVideo     = file.type.startsWith('video/');
+            const isImage     = file.type.startsWith('image/');
+            const oversizeFile = isFileOversized(file);
+            const limitLabel  = getFileLimitLabel(file);
+
+            const fileCard = document.createElement('div');
+            fileCard.className = `card mb-3 ${oversizeFile ? 'border-danger' : ''}`;
+            fileCard.dataset.oversized = oversizeFile ? '1' : '0';
+            fileCard.innerHTML = `
+                <div class="card-body ${oversizeFile ? 'bg-danger bg-opacity-10' : ''}">
+                    <div class="row align-items-center">
+                        <div class="col-md-7">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-${isVideo ? 'camera-video' : isImage ? 'image' : 'file-earmark'} fs-3 me-3
+                                   text-${oversizeFile ? 'danger' : 'primary'}"></i>
+                                <div>
+                                    <strong>${file.name}</strong><br>
+                                    <small class="text-${oversizeFile ? 'danger fw-semibold' : 'muted'}">
+                                        ${fileSizeMB} MB &nbsp;|&nbsp; ${file.type || 'Unknown type'}
                                     </small>
                                 </div>
                             </div>
-                        `;
+                        </div>
+                        <div class="col-md-5 text-end">
+                            ${oversizeFile
+                                ? `<span class="badge bg-danger fs-6">
+                                       <i class="bi bi-x-circle me-1"></i>Too Large (max ${limitLabel})
+                                   </span>
+                                  `
+                                : `<span class="badge bg-success">
+                                       <i class="bi bi-check-circle me-1"></i>Ready to Upload
+                                   </span>`
+                            }
+                        </div>
+                    </div>
+
+                    ${!oversizeFile ? `
+                    <!-- Preview Area -->
+                    <div class="preview-area mt-3" id="preview-${index}"></div>
+                    <!-- Progress Bar (hidden until submit) -->
+                    <div class="progress mt-3" style="display:none;" id="progress-${index}">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated"
+                             role="progressbar" style="width:0%">0%</div>
+                    </div>` : ''}
+                </div>`;
+
+            container.appendChild(fileCard);
+
+            // Preview (only for valid-size files)
+            if (!oversizeFile) {
+                const previewArea = fileCard.querySelector(`#preview-${index}`);
+                if (isImage || isVideo) {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        previewArea.innerHTML = isImage
+                            ? `<div class="text-center">
+                                   <img src="${e.target.result}" class="img-fluid rounded"
+                                        style="max-height:200px;max-width:100%;" alt="Preview">
+                               </div>`
+                            : `<div class="text-center">
+                                   <video controls class="rounded" style="max-height:300px;max-width:100%;">
+                                       <source src="${e.target.result}" type="${file.type}">
+                                       Your browser does not support video preview.
+                                   </video>
+                                   <div class="mt-1">
+                                       <small class="text-muted">
+                                           <i class="bi bi-play-circle"></i> Preview before submitting
+                                       </small>
+                                   </div>
+                               </div>`;
                     };
                     reader.readAsDataURL(file);
                 }
-            });
-            
-            fileList.appendChild(container);
-        }
+            }
+        });
+
+        fileList.appendChild(container);
     });
-    
-    // Simulate upload progress on form submit
+
+    // ─── Form submit: block if ALL files are oversized; warn if some are ─────
     const form = document.querySelector('form[enctype="multipart/form-data"]');
     if (form) {
-        form.addEventListener('submit', function(e) {
-            const progressBars = document.querySelectorAll('.progress');
-            
-            progressBars.forEach((progressBar, index) => {
-                progressBar.style.display = 'block';
-                const bar = progressBar.querySelector('.progress-bar');
-                
-                // Simulate progress
+        form.addEventListener('submit', function (e) {
+            const input = document.getElementById('attachments');
+            if (!input.files.length) return; // no files – allow submit
+
+            const files       = Array.from(input.files);
+            const validFiles  = files.filter(f => !isFileOversized(f));
+            const badFiles    = files.filter(f =>  isFileOversized(f));
+
+            // Block submission if every selected file is oversized
+            if (validFiles.length === 0) {
+                e.preventDefault();
+                const existing = document.getElementById('clientSizeError');
+                if (!existing) {
+                    const alert = document.createElement('div');
+                    alert.id = 'clientSizeError';
+                    alert.className = 'alert alert-danger mt-3';
+                    alert.innerHTML = `
+                        <i class="bi bi-x-octagon-fill me-1"></i>
+                        <strong>Upload blocked!</strong> All selected files exceed the allowed size limit.
+                        Please remove them or choose smaller files before submitting.`;
+                    form.prepend(alert);
+                    alert.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                return;
+            }
+
+            // Some files are ok → proceed but remind user oversized ones are skipped
+            if (badFiles.length) {
+                const confirmed = confirm(
+                    `⚠️ ${badFiles.length} file(s) exceed the size limit and will NOT be uploaded:\n\n` +
+                    badFiles.map(f => `• ${f.name} (${(f.size/1024/1024).toFixed(2)} MB)`).join('\n') +
+                    `\n\nThe remaining ${validFiles.length} file(s) will still be submitted. Continue?`
+                );
+                if (!confirmed) { e.preventDefault(); return; }
+            }
+
+            // Animate progress bars for valid files only
+            document.querySelectorAll('.progress').forEach(bar => {
+                bar.style.display = 'block';
+                const inner = bar.querySelector('.progress-bar');
                 let progress = 0;
                 const interval = setInterval(() => {
                     progress += Math.random() * 15;
                     if (progress > 95) progress = 95;
-                    
-                    bar.style.width = progress + '%';
-                    bar.textContent = Math.round(progress) + '%';
-                    
-                    if (progress >= 95) {
-                        clearInterval(interval);
-                    }
+                    inner.style.width = progress + '%';
+                    inner.textContent = Math.round(progress) + '%';
+                    if (progress >= 95) clearInterval(interval);
                 }, 200);
             });
         });
